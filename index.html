@@ -223,7 +223,7 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
       <div class="legend">
         <span><i style="background:var(--band)"></i>可能解分布</span>
         <span><i style="background:var(--cur)"></i>本輪設置</span>
-        <span><i style="background:var(--mu)"></i>賽道先驗 μ ± 0.037</span>
+        <span><i style="background:var(--mu)"></i>賽道先驗 μ ± 0.038</span>
       </div>
     </section>
 
@@ -300,14 +300,14 @@ const RATINGS=[
   {label:"Good",   lo:0.04, hi:0.10},
   {label:"Bad",    lo:0.10, hi:Infinity},
 ];
-// 浮動半寬：24 條賽道、26 組配對差，平均 |Δ| 0.0248 → h ≈ 1.5×
-const PRIOR_H=0.037;
+// 浮動半寬：24 條賽道、27 組配對差，平均 |Δ| 0.0251 → h ≈ 1.5×（分布比均勻更集中於 0）
+const PRIOR_H=0.038;
 const CENTER=[10,7,4,8,10];
 
 // 賽道母表。setups 是各賽道歷史最終設置（滑桿 index）。
 const TRACKS=[
   {code:'BHR', key:'bahrain',      name:'Bahrain GP',              circuit:'Sakhir',        setups:[[10,5,3,11,6],[9,5,3,13,8]]},
-  {code:'JED', key:'saudi',        name:'Saudi Arabian GP',        circuit:'Jeddah',        setups:[[13,5,0,16,0],[16,4,1,16,0]]},
+  {code:'JED', key:'saudi',        name:'Saudi Arabian GP',        circuit:'Jeddah',        setups:[[13,5,0,16,0],[16,4,1,16,0],[13,5,0,16,0],[16,4,1,16,0]]},
   {code:'AUS', key:'australian',   name:'Australian GP',           circuit:'Albert Park',   setups:[[17,8,2,8,13],[16,8,2,7,8]]},
   {code:'SUZ', key:'suzuka',       name:'Japanese GP',             circuit:'Suzuka',        setups:[[14,7,5,16,0],[15,7,5,16,0]]},
   {code:'SHA', key:'chinese',      name:'Chinese GP',              circuit:'Shanghai',      setups:[[4,5,7,5,18],[8,4,8,0,19]]},
@@ -809,7 +809,7 @@ $("addPrior").addEventListener("click",()=>{
   T().setups.push(res.best.slice()); save(); renderCal(); renderTrack(); renderDims(); renderWhy(); renderLog();
   const m=$("priorMsg");
   m.hidden=!dup;
-  if(dup) m.textContent="這組設置本賽道已經有一筆一模一樣的。兩台車跑出同一組解是正常的，但如果是重複按了按鈕，用右邊的按鈕刪掉。";
+  if(dup) m.textContent="本賽道已有一筆完全相同的設置。這通常是真的重複落點（同場兩台車、或跨季落回同一點），本身就是有價值的樣本，照常保留。";
 });
 $("logUnsaved").addEventListener("click",e=>{
   const b=e.target.closest(".add"); if(!b) return;
