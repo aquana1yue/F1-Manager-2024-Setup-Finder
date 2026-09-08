@@ -156,6 +156,19 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .del{border:none;color:var(--faint);font-size:12px;padding:4px 6px}
 .del:hover{color:var(--bad);border:none}
 .empty{color:var(--faint);font-size:13px;padding:14px}
+.badge2{font-family:var(--mono);font-size:11px;color:#0c151d;background:var(--rec);padding:1px 6px;margin-left:6px}
+.lsec{font-size:11.5px;color:var(--faint);padding:10px 14px 4px;letter-spacing:.3px}
+.lrow{display:flex;align-items:center;gap:10px;padding:7px 14px;font-size:12.5px;flex-wrap:wrap}
+.lrow + .lrow{border-top:1px solid var(--line-soft)}
+.lrow .tm{font-family:var(--mono);font-size:11px;color:var(--faint);flex:none}
+.lrow .tr{font-family:var(--mono);font-size:11.5px;color:var(--band);width:38px;flex:none}
+.lrow .cr{font-size:11px;color:var(--faint);flex:none}
+.lrow .st{font-family:var(--mono);font-size:12px;color:var(--dim);flex:none}
+.lrow .nn{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:auto}
+.lrow.solved{background:#141f22}
+.lrow.solved .st{color:var(--great)}
+.lrow .add{padding:3px 8px;font-size:11.5px;border-color:var(--great);color:var(--great)}
+.lrow .add:hover{background:var(--great);color:#0c151d}
 textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--line);color:var(--text);font-family:var(--mono);font-size:11.5px;padding:9px;resize:vertical}
 .samples{font-family:var(--mono);font-size:12px;color:var(--dim);padding:0 14px 12px;line-height:1.7}
 @media(prefers-reduced-motion:no-preference){.seg,.mark{transition:left .18s ease,width .18s ease}}
@@ -210,7 +223,7 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
       <div class="legend">
         <span><i style="background:var(--band)"></i>可能解分布</span>
         <span><i style="background:var(--cur)"></i>本輪設置</span>
-        <span><i style="background:var(--mu)"></i>賽道先驗 μ ± 0.038</span>
+        <span><i style="background:var(--mu)"></i>賽道先驗 μ ± 0.037</span>
       </div>
     </section>
 
@@ -235,7 +248,15 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
 <section class="panel">
   <h2>賽道先驗資料</h2>
   <div class="samples" id="samples"></div>
+  <p class="hint" id="priorMsg" hidden></p>
   <div class="actions"><button id="addPrior">把這組解加入本賽道</button><button id="delPrior">刪掉本賽道最後一筆</button></div>
+</section>
+
+<section class="panel">
+  <h2>履歷 <span id="logBadge"></span></h2>
+  <div id="logUnsaved"></div>
+  <div id="logAll"></div>
+  <div class="actions"><button id="clearLog">清空履歷</button><span class="hint" style="padding:0;border:none" id="logHint"></span></div>
 </section>
 
 <section class="panel">
@@ -279,39 +300,40 @@ const RATINGS=[
   {label:"Good",   lo:0.04, hi:0.10},
   {label:"Bad",    lo:0.10, hi:Infinity},
 ];
-// 浮動半寬：22 條賽道 Car1/Car2 配對差，平均 |Δ| 0.0249 → h ≈ 1.5×
-const PRIOR_H=0.038;
+// 浮動半寬：24 條賽道、26 組配對差，平均 |Δ| 0.0248 → h ≈ 1.5×
+const PRIOR_H=0.037;
 const CENTER=[10,7,4,8,10];
 
 // 賽道母表。setups 是各賽道歷史最終設置（滑桿 index）。
 const TRACKS=[
-  {code:'BHR', key:'bahrain',     name:'Bahrain GP',        circuit:'Sakhir',      setups:[[10,5,3,11,6],[9,5,3,13,8]]},
-  {code:'JED', key:'saudi',       name:'Saudi Arabian GP',  circuit:'Jeddah',      setups:[[13,5,0,16,0],[16,4,1,16,0]]},
-  {code:'AUS', key:'australian',  name:'Australian GP',     circuit:'Albert Park', setups:[]},
-  {code:'SUZ', key:'suzuka',      name:'Japanese GP',       circuit:'Suzuka',      setups:[[14,7,5,16,0],[15,7,5,16,0]]},
-  {code:'SHA', key:'chinese',     name:'Chinese GP',        circuit:'Shanghai',    setups:[[4,5,7,5,18],[8,4,8,0,19]]},
-  {code:'MIA', key:'miami',       name:'Miami GP',          circuit:'Miami',       setups:[]},
-  {code:'IMO', key:'imola',       name:'Emilia Romagna GP', circuit:'Imola',       setups:[[14,7,6,15,1],[12,8,3,16,0]]},
-  {code:'MON', key:'monaco',      name:'Monaco GP',         circuit:'Monte Carlo', setups:[[20,14,2,16,20],[20,14,1,12,13]]},
-  {code:'MTL', key:'montreal',    name:'Canadian GP',       circuit:'Montreal',    setups:[[6,5,7,12,20],[6,5,7,12,19]]},
-  {code:'CAT', key:'catalunya',   name:'Spanish GP',        circuit:'Catalunya',   setups:[[16,11,1,10,12],[15,11,0,5,3]]},
-  {code:'RBR', key:'spielberg',   name:'Austrian GP',       circuit:'Spielberg',   setups:[[9,8,8,11,20],[10,9,8,11,18]]},
-  {code:'SIL', key:'silverstone', name:'British GP',        circuit:'Silverstone', setups:[[11,5,0,10,2],[11,5,1,15,13]]},
-  {code:'HUN', key:'hungaroring', name:'Hungarian GP',      circuit:'Hungaroring', setups:[[18,12,8,14,20],[20,12,7,5,8]]},
-  {code:'SPA', key:'belgian',     name:'Belgian GP',        circuit:'Spa',         setups:[[4,1,5,14,9],[5,2,5,14,12]]},
-  {code:'ZAN', key:'zandvoort',   name:'Dutch GP',          circuit:'Zandvoort',   setups:[[19,9,4,14,20],[19,9,3,11,18]]},
-  {code:'MNZ', key:'monza',       name:'Italian GP',        circuit:'Monza',       setups:[[2,0,7,5,15],[3,0,7,1,10]]},
-  {code:'BAK', key:'baku',        name:'Azerbaijan GP',     circuit:'Baku',        setups:[[4,3,7,6,19],[3,2,7,6,20]]},
-  {code:'SIN', key:'singapore',   name:'Singapore GP',      circuit:'Marina Bay',  setups:[[13,13,0,1,18],[15,13,1,1,19]]},
-  {code:'USA', key:'austin',      name:'United States GP',  circuit:'Austin',      setups:[[17,8,8,16,10],[16,7,8,16,14]]},
-  {code:'MEX', key:'mexico',      name:'Mexico City GP',    circuit:'Mexico City', setups:[[13,8,7,15,6],[13,8,7,15,6]]},
-  {code:'INT', key:'interlagos',  name:'Sao Paulo GP',      circuit:'Interlagos',  setups:[[15,8,7,11,9],[14,8,7,14,11]]},
-  {code:'LAS', key:'lasvegas',    name:'Las Vegas GP',      circuit:'Las Vegas',   setups:[[0,3,8,8,14],[0,3,8,11,20]]},
-  {code:'QAT', key:'losail',      name:'Qatar GP',          circuit:'Losail',      setups:[[15,8,1,10,9],[16,8,2,14,18]]},
-  {code:'YAS', key:'abudhabi',    name:'Abu Dhabi GP',      circuit:'Yas Marina',  setups:[[10,8,4,7,9],[10,7,6,12,20]]},
+  {code:'BHR', key:'bahrain',      name:'Bahrain GP',              circuit:'Sakhir',        setups:[[10,5,3,11,6],[9,5,3,13,8]]},
+  {code:'JED', key:'saudi',        name:'Saudi Arabian GP',        circuit:'Jeddah',        setups:[[13,5,0,16,0],[16,4,1,16,0]]},
+  {code:'AUS', key:'australian',   name:'Australian GP',           circuit:'Albert Park',   setups:[[17,8,2,8,13],[16,8,2,7,8]]},
+  {code:'SUZ', key:'suzuka',       name:'Japanese GP',             circuit:'Suzuka',        setups:[[14,7,5,16,0],[15,7,5,16,0]]},
+  {code:'SHA', key:'chinese',      name:'Chinese GP',              circuit:'Shanghai',      setups:[[4,5,7,5,18],[8,4,8,0,19]]},
+  {code:'MIA', key:'miami',        name:'Miami GP',                circuit:'Miami',         setups:[[15,8,7,15,8],[16,8,8,16,10]]},
+  {code:'IMO', key:'imola',        name:'Emilia Romagna GP',       circuit:'Imola',         setups:[[14,7,6,15,1],[12,8,3,16,0]]},
+  {code:'MON', key:'monaco',       name:'Monaco GP',               circuit:'Monte Carlo',   setups:[[20,14,2,16,20],[20,14,1,12,13]]},
+  {code:'MTL', key:'montreal',     name:'Canadian GP',             circuit:'Montreal',      setups:[[6,5,7,12,20],[6,5,7,12,19],[6,6,6,9,14],[9,5,8,9,20]]},
+  {code:'CAT', key:'catalunya',    name:'Spanish GP',              circuit:'Catalunya',     setups:[[16,11,1,10,12],[15,11,0,5,3]]},
+  {code:'RBR', key:'spielberg',    name:'Austrian GP',             circuit:'Spielberg',     setups:[[9,8,8,11,20],[10,9,8,11,18]]},
+  {code:'SIL', key:'silverstone',  name:'British GP',              circuit:'Silverstone',   setups:[[11,5,0,10,2],[11,5,1,15,13]]},
+  {code:'HUN', key:'hungaroring',  name:'Hungarian GP',            circuit:'Hungaroring',   setups:[[18,12,8,14,20],[20,12,7,5,8]]},
+  {code:'SPA', key:'belgian',      name:'Belgian GP',              circuit:'Spa',           setups:[[4,1,5,14,9],[5,2,5,14,12],[5,2,4,11,3],[6,2,4,10,4]]},
+  {code:'ZAN', key:'zandvoort',    name:'Dutch GP',                circuit:'Zandvoort',     setups:[[19,9,4,14,20],[19,9,3,11,18]]},
+  {code:'MNZ', key:'monza',        name:'Italian GP',              circuit:'Monza',         setups:[[2,0,7,5,15],[3,0,7,1,10]]},
+  {code:'BAK', key:'baku',         name:'Azerbaijan GP',           circuit:'Baku',          setups:[[4,3,7,6,19],[3,2,7,6,20]]},
+  {code:'SIN', key:'singapore',    name:'Singapore GP',            circuit:'Marina Bay',    setups:[[13,13,0,1,18],[15,13,1,1,19]]},
+  {code:'USA', key:'austin',       name:'United States GP',        circuit:'Austin',        setups:[[17,8,8,16,10],[16,7,8,16,14]]},
+  {code:'MEX', key:'mexico',       name:'Mexico City GP',          circuit:'Mexico City',   setups:[[13,8,7,15,6],[13,8,7,15,6]]},
+  {code:'INT', key:'interlagos',   name:'Sao Paulo GP',            circuit:'Interlagos',    setups:[[15,8,7,11,9],[14,8,7,14,11]]},
+  {code:'LAS', key:'lasvegas',     name:'Las Vegas GP',            circuit:'Las Vegas',     setups:[[0,3,8,8,14],[0,3,8,11,20]]},
+  {code:'QAT', key:'losail',       name:'Qatar GP',                circuit:'Losail',        setups:[[15,8,1,10,9],[16,8,2,14,18]]},
+  {code:'YAS', key:'abudhabi',     name:'Abu Dhabi GP',            circuit:'Yas Marina',    setups:[[10,8,4,7,9],[10,7,6,12,20]]},
 ];
+const SEASON_ORDER=['bahrain','miami','australian','montreal','saudi','belgian','imola','silverstone','monaco','catalunya','austin','spielberg','hungaroring','baku','chinese','monza','losail','singapore','zandvoort','mexico','interlagos','lasvegas','suzuka','abudhabi'];
 const DEFAULT_ORDER=TRACKS.map(t=>t.key);   // 2024 原始賽曆
-let order=DEFAULT_ORDER.slice();            // 本季賽程，可自訂
+let order=SEASON_ORDER.slice();             // 本季賽程，可自訂
 const byKey=k=>TRACKS.find(t=>t.key===k);
 
 function values(s){
@@ -335,10 +357,12 @@ const storage=(()=>{
     write(o){ if(!ok) return false; try{ localStorage.setItem(SKEY,JSON.stringify(o)); return true; }catch(e){ return false; } }
   };
 })();
+let log=[];                       // 全域履歷，換賽道也不清空
+const LOG_MAX=400;
 function snapshot(){
   const priors={};
   TRACKS.forEach(t=>{ if(t.setups.length) priors[t.key]=t.setups; });
-  return {v:1, saved:new Date().toISOString(), order, priors};
+  return {v:1, saved:new Date().toISOString(), order, priors, log};
 }
 function applySnapshot(o){
   if(!o||typeof o!=="object") throw new Error("格式不對");
@@ -346,6 +370,7 @@ function applySnapshot(o){
     const valid=o.order.filter(k=>byKey(k));
     order=valid.concat(DEFAULT_ORDER.filter(k=>!valid.includes(k)));
   }
+  if(Array.isArray(o.log)) log=o.log.filter(e=>e&&Array.isArray(e.setup)&&e.setup.length===5).slice(-LOG_MAX);
   if(o.priors&&typeof o.priors==="object"){
     TRACKS.forEach(t=>{
       const s=o.priors[t.key];
@@ -469,6 +494,22 @@ function constraintsOf(car){
     h.ratings.forEach((r,i)=>{ if(r!==null) cons[i].push({v:v[i],lo:RATINGS[r].lo,hi:RATINGS[r].hi}); });
   }
   return cons;
+}
+
+function sameSetup(a,b){ return a.every((x,i)=>x===b[i]); }
+function inPriors(key,s){ const t=byKey(key); return !!t&&t.setups.some(x=>sameSetup(x,s)); }
+function pushLog(e){ log.push(e); if(log.length>LOG_MAX) log=log.slice(-LOG_MAX); save(); }
+// 已收斂但沒被寫進先驗的結果（同一條賽道同一組解只列一次）
+function unsavedSolved(){
+  const seen=new Set(), out=[];
+  for(let i=log.length-1;i>=0;i--){
+    const e=log[i]; if(!e.solved) continue;
+    if(inPriors(e.track,e.solved)) continue;
+    const k=e.track+"|"+e.solved.join(",");
+    if(seen.has(k)) continue;
+    seen.add(k); out.push(e);
+  }
+  return out;
 }
 
 /* ================= 介面 ================= */
@@ -644,7 +685,43 @@ function renderTrack(){
   $("prevR").disabled=ri===0; $("nextR").disabled=ri===order.length-1;
 }
 
-function render(){ renderSliders(); renderPending(); renderStatus(); renderDims(); renderWhy(); renderHistory(); renderTrack(); }
+function fmtTime(ms){
+  const d=new Date(ms);
+  return d.toLocaleDateString("zh-TW",{month:"2-digit",day:"2-digit"})+" "
+       + d.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit",hour12:false});
+}
+function setupStr(s){ return s.map((x,i)=>SLIDERS[i].k+x).join(" "); }
+function renderLog(){
+  const un=unsavedSolved();
+  $("logBadge").innerHTML = un.length ? `<span class="badge2">${un.length} 筆待補存</span>` : "";
+  $("logUnsaved").innerHTML = un.length
+    ? `<div class="lsec">已收斂、但還沒寫進先驗</div>` + un.map(e=>{
+        const t=byKey(e.track);
+        return `<div class="lrow solved">
+          <span class="tm">${fmtTime(e.t)}</span>
+          <span class="tr">${t?t.code:e.track}</span>
+          <span class="cr">Car ${e.car+1}</span>
+          <span class="st">${setupStr(e.solved)}</span>
+          <button class="add" data-t="${e.track}" data-s="${e.solved.join(",")}">補存為先驗</button>
+        </div>`; }).join("")
+    : "";
+  const recent=log.slice(-40).reverse();
+  $("logAll").innerHTML = recent.length
+    ? `<div class="lsec">最近 ${recent.length} 筆回合（共 ${log.length}）</div>` + recent.map(e=>{
+        const t=byKey(e.track);
+        return `<div class="lrow${e.solved?" solved":""}">
+          <span class="tm">${fmtTime(e.t)}</span>
+          <span class="tr">${t?t.code:e.track}</span>
+          <span class="cr">Car ${e.car+1}</span>
+          <span class="st">${setupStr(e.setup)}</span>
+          <span class="tags">${e.ratings.map((r,i)=>r===null?"":`<span class="tag" data-r="${r}">${DIMS[i].name.slice(0,4)}</span>`).join("")}</span>
+          <span class="nn">${e.solved?"已鎖定":"剩 "+e.n.toLocaleString("en-US")}</span>
+        </div>`; }).join("")
+    : `<p class="empty">還沒有任何回合。每按一次「記錄回饋」就會留下一筆，換賽道也不會清掉。</p>`;
+  $("logHint").textContent = "履歷會跟著存檔和備份檔一起保存，用來補救忘記寫入的收斂結果。";
+  $("clearLog").disabled = !log.length;
+}
+function render(){ renderLog(); renderSliders(); renderPending(); renderStatus(); renderDims(); renderWhy(); renderHistory(); renderTrack(); }
 
 function recompute(){
   busy=true; renderStatus();
@@ -703,6 +780,9 @@ $("record").addEventListener("click",()=>{
   requestAnimationFrame(()=>{
     const res=solve(constraintsOf(C()),MU());
     C().result=res;
+    const rec=C().history[C().history.length-1];
+    pushLog({t:Date.now(), track:order[ri], car:active, setup:rec.setup.slice(),
+             ratings:rec.ratings.slice(), n:res.n, solved:res.n===1?res.best.slice():null});
     if(res.n>0) C().setup=res.best.slice();      // 直接套用下一組建議
     busy=false; render();
     const w=$("fbWarn");
@@ -725,8 +805,19 @@ $("reset").addEventListener("click",()=>{
 });
 $("addPrior").addEventListener("click",()=>{
   const res=C().result; if(!res||res.n!==1) return;
-  T().setups.push(res.best.slice()); save(); renderCal(); renderTrack(); renderDims(); renderWhy();
+  const dup=inPriors(T().key,res.best);
+  T().setups.push(res.best.slice()); save(); renderCal(); renderTrack(); renderDims(); renderWhy(); renderLog();
+  const m=$("priorMsg");
+  m.hidden=!dup;
+  if(dup) m.textContent="這組設置本賽道已經有一筆一模一樣的。兩台車跑出同一組解是正常的，但如果是重複按了按鈕，用右邊的按鈕刪掉。";
 });
+$("logUnsaved").addEventListener("click",e=>{
+  const b=e.target.closest(".add"); if(!b) return;
+  const t=byKey(b.dataset.t); if(!t) return;
+  t.setups.push(b.dataset.s.split(",").map(Number));
+  save(); renderCal(); renderTrack(); renderLog(); renderDims(); renderWhy();
+});
+$("clearLog").addEventListener("click",()=>{ log=[]; save(); renderLog(); });
 $("delPrior").addEventListener("click",()=>{
   const t=T(); if(!t.setups.length) return;
   t.setups.pop(); save(); renderCal(); renderTrack(); renderDims(); renderWhy(); seedFromPrior(); recompute();
