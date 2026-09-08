@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup Finder — F1 Manager 2024</title>
+<style>
+:root{
+  --bg:#0c151d; --panel:#122029; --sunk:#0a131a;
+  --line:#223a48; --line-soft:#1a2c37;
+  --text:#dce8ef; --dim:#7d97a7; --faint:#4d6675;
+  --band:#4fb8dd; --cur:#f2f7fa; --rec:#e8b93f; --mu:#6fdcb0;
+  --optimal:#a97cf5; --great:#3fc97a; --good:#e8b93f; --bad:#e2604f;
+  --sans:"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wrap{max-width:1080px;margin:0 auto;padding:26px 20px 60px}
+
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding-bottom:13px;border-bottom:1px solid var(--line)}
+h1{font-size:19px;font-weight:600;margin:0;letter-spacing:.2px}
+header .sub{color:var(--faint);font-size:13px;font-family:var(--mono)}
+header .save{margin-left:auto;font-size:12px;color:var(--faint);font-family:var(--mono)}
+header .save.on{color:var(--mu)}
+header .save.off{color:var(--bad)}
+
+/* ---- 賽程 ---- */
+.cal{display:flex;gap:3px;overflow-x:auto;padding:14px 0 4px;scrollbar-width:thin}
+.cal::-webkit-scrollbar{height:5px}
+.cal::-webkit-scrollbar-thumb{background:var(--line)}
+.rnd{flex:none;width:46px;padding:5px 0 6px;border:1px solid var(--line-soft);background:var(--sunk);
+  display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;position:relative}
+.rnd:hover{border-color:var(--band)}
+.rnd .r{font-family:var(--mono);font-size:9.5px;color:var(--faint);line-height:1}
+.rnd .c{font-family:var(--mono);font-size:11.5px;color:var(--dim);letter-spacing:.4px}
+.rnd .dot{position:absolute;bottom:2px;width:3px;height:3px;border-radius:50%;background:var(--mu);opacity:.75}
+.rnd[aria-current=true]{border-color:var(--band);background:#10222c}
+.rnd[aria-current=true] .c{color:var(--text)}
+.rnd[aria-current=true] .r{color:var(--band)}
+
+.trackbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0 16px;border-bottom:1px solid var(--line-soft);margin-bottom:18px}
+.tname{font-size:15px}
+.tname .rn{font-family:var(--mono);font-size:12px;color:var(--band);margin-right:8px}
+.tname .gp{color:var(--faint);font-size:13px;margin-left:8px}
+.nav{display:flex;gap:5px}
+.pstat{font-size:12.5px;color:var(--dim);flex-basis:100%}
+.pstat b{color:var(--mu);font-weight:600;font-family:var(--mono)}
+.toggle{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--dim);cursor:pointer;margin-left:auto}
+.toggle input{accent-color:var(--mu);width:15px;height:15px}
+
+/* ---- 賽程編輯 ---- */
+.editor{border:1px solid var(--line);background:var(--panel);margin-bottom:18px}
+.editor .body{padding:8px 14px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:2px}
+.erow{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px}
+.erow input[type=number]{width:44px;background:var(--sunk);border:1px solid var(--line);color:var(--text);
+  font-family:var(--mono);font-size:12px;padding:3px 4px;text-align:center}
+.erow .cd{font-family:var(--mono);font-size:12px;color:var(--band);width:34px}
+.erow .nm{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.erow .mv{border:none;color:var(--faint);padding:2px 4px;font-size:11px}
+.erow .mv:hover{color:var(--text);border:none}
+
+/* ---- 車輛頁籤 ---- */
+.tabs{display:flex;margin-bottom:16px;border-bottom:1px solid var(--line-soft)}
+.tab{border:none;border-bottom:2px solid transparent;padding:8px 18px;color:var(--dim);font-size:14px;background:none}
+.tab:hover{border-color:transparent;color:var(--text)}
+.tab[aria-selected=true]{color:var(--text);border-bottom-color:var(--band)}
+.tab .n{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-left:6px}
+
+.cols{display:grid;grid-template-columns:308px 1fr;gap:26px;align-items:start}
+@media(max-width:840px){.cols{grid-template-columns:1fr;gap:20px}}
+
+.panel{background:var(--panel);border:1px solid var(--line-soft)}
+.panel + .panel{margin-top:18px}
+.panel > h2{font-size:12px;font-weight:600;color:var(--dim);margin:0;padding:11px 14px;border-bottom:1px solid var(--line-soft);letter-spacing:.3px}
+.panel .body{padding:14px}
+
+/* ---- 滑桿 ---- */
+.sl{padding:11px 0;border-left:2px solid transparent;padding-left:8px;margin-left:-10px;transition:border-color .2s}
+.sl + .sl{border-top:1px solid var(--line-soft)}
+.sl.changed{border-left-color:var(--rec)}
+.sl-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.badge{width:19px;height:19px;flex:none;display:grid;place-items:center;border:1px solid var(--line);color:var(--dim);font-size:11px;font-family:var(--mono)}
+.sl-name{flex:1;font-size:13.5px}
+.sl-val{font-size:14px}
+.sl.changed .sl-val{color:var(--rec)}
+.delta{font-family:var(--mono);font-size:11px;color:var(--rec);border:1px solid var(--rec);padding:0 4px;opacity:.9}
+.sl input[type=range]{width:100%;margin:0;accent-color:var(--band);height:18px;background:transparent;cursor:pointer}
+.sl.changed input[type=range]{accent-color:var(--rec)}
+.sl-foot{display:flex;justify-content:space-between;color:var(--faint);font-size:11.5px;margin-top:2px}
+
+/* ---- 收斂 ---- */
+.status{display:flex;align-items:baseline;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.status .n{font-family:var(--mono);font-size:24px;letter-spacing:-.5px}
+.status .n.solved{color:var(--great)}
+.status .n.dead{color:var(--bad)}
+.status .n.busy{color:var(--faint)}
+.status .lbl{color:var(--dim);font-size:12.5px}
+
+.dim{display:grid;grid-template-columns:84px 1fr 138px;align-items:center;gap:12px;padding:9px 0}
+.dim + .dim{border-top:1px solid var(--line-soft)}
+.dim-name{font-size:13px;color:var(--dim)}
+.track{position:relative;height:28px;background:var(--sunk);border:1px solid var(--line-soft)}
+.seg{position:absolute;top:0;bottom:0;background:var(--band);border-left:1px solid var(--band);border-right:1px solid var(--band)}
+.whisk{position:absolute;top:50%;height:1px;background:var(--mu);opacity:.45}
+.mark{position:absolute;top:-1px;bottom:-1px;width:2px;margin-left:-1px}
+.mark.cur{background:var(--cur)}
+.mark.mu{background:var(--mu);opacity:.85}
+.dim-num{text-align:right;font-family:var(--mono);font-size:11.5px;line-height:1.4}
+.dim-num .v{display:block;font-size:14px}
+.dim-num .r{display:block;color:var(--faint)}
+.dim-num .split{display:block;color:var(--band)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:0 14px 13px;font-size:11.5px;color:var(--faint)}
+.legend i{display:inline-block;width:9px;height:2px;vertical-align:middle;margin-right:5px}
+
+/* ---- 回饋 ---- */
+.fb{display:grid;grid-template-columns:84px 1fr;align-items:center;gap:12px;padding:7px 0}
+.fb + .fb{border-top:1px solid var(--line-soft)}
+.fb-name{font-size:13px;color:var(--dim)}
+.opts{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+button{font-family:inherit;font-size:13px;color:var(--text);background:transparent;border:1px solid var(--line);padding:6px 8px;cursor:pointer}
+button:hover{border-color:var(--band)}
+button:focus-visible{outline:2px solid var(--band);outline-offset:1px}
+button:disabled{opacity:.4;cursor:not-allowed}
+.opt{font-size:12px;padding:5px 4px;color:var(--dim)}
+.opt[aria-pressed=true]{color:#0c151d;font-weight:600;border-color:transparent}
+.opt[data-r="0"][aria-pressed=true]{background:var(--optimal)}
+.opt[data-r="1"][aria-pressed=true]{background:var(--great)}
+.opt[data-r="2"][aria-pressed=true]{background:var(--good)}
+.opt[data-r="3"][aria-pressed=true]{background:var(--bad)}
+.opt[data-r="-1"][aria-pressed=true]{background:var(--faint);color:var(--text)}
+
+.actions{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line-soft);flex-wrap:wrap;align-items:center}
+.primary{background:var(--band);border-color:var(--band);color:#08131a;font-weight:600;padding:8px 16px}
+.primary:hover{filter:brightness(1.1)}
+.primary:disabled{filter:none}
+.why{padding:10px 14px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--faint);line-height:1.6}
+.why b{color:var(--mu);font-weight:600}
+.why em{color:var(--rec);font-style:normal}
+.warn{color:var(--bad);font-size:13px;padding:0 14px 14px;line-height:1.55}
+.hint{color:var(--faint);font-size:12px;padding:0 14px 14px;line-height:1.6}
+
+/* ---- 歷史 ---- */
+.hrow{display:flex;align-items:center;gap:12px;padding:9px 14px;font-size:13px;flex-wrap:wrap}
+.hrow + .hrow{border-top:1px solid var(--line-soft)}
+.hrow .no{color:var(--faint);font-family:var(--mono);font-size:12px;width:18px;flex:none}
+.hrow .setup{font-family:var(--mono);font-size:12.5px;color:var(--dim);flex:none}
+.tags{display:flex;gap:5px;flex-wrap:wrap;flex:1}
+.tag{font-size:11px;padding:2px 6px;border:1px solid var(--line);color:var(--dim);font-family:var(--mono)}
+.tag[data-r="0"]{border-color:var(--optimal);color:var(--optimal)}
+.tag[data-r="1"]{border-color:var(--great);color:var(--great)}
+.tag[data-r="2"]{border-color:var(--good);color:var(--good)}
+.tag[data-r="3"]{border-color:var(--bad);color:var(--bad)}
+.del{border:none;color:var(--faint);font-size:12px;padding:4px 6px}
+.del:hover{color:var(--bad);border:none}
+.empty{color:var(--faint);font-size:13px;padding:14px}
+textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--line);color:var(--text);font-family:var(--mono);font-size:11.5px;padding:9px;resize:vertical}
+.samples{font-family:var(--mono);font-size:12px;color:var(--dim);padding:0 14px 12px;line-height:1.7}
+@media(prefers-reduced-motion:no-preference){.seg,.mark{transition:left .18s ease,width .18s ease}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Setup Finder</h1>
+  <span class="sub">F1 Manager 2024 · 1,012,095 組</span>
+  <span class="save" id="saveState"></span>
+</header>
+
+<div class="cal" id="cal"></div>
+<div class="trackbar">
+  <div class="tname" id="tname"></div>
+  <div class="nav">
+    <button id="prevR" aria-label="上一場">←</button>
+    <button id="nextR">下一場 →</button>
+    <button id="editCal">編輯賽程</button>
+  </div>
+  <label class="toggle"><input type="checkbox" id="usePrior" checked>套用賽道先驗</label>
+  <span class="pstat" id="pstat"></span>
+</div>
+
+<section class="editor" id="editor" hidden>
+  <h2 style="font-size:12px;font-weight:600;color:var(--dim);margin:0;padding:11px 14px;border-bottom:1px solid var(--line-soft)">本季賽程 — 改左邊的數字即可調整輪次</h2>
+  <div class="body" id="editorBody"></div>
+  <div class="actions"><button id="resetCal">還原 2024 原始順序</button><button id="closeCal">完成</button></div>
+</section>
+
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" id="tab0" aria-selected="true">Car 1<span class="n" id="tn0"></span></button>
+  <button class="tab" role="tab" id="tab1" aria-selected="false">Car 2<span class="n" id="tn1"></span></button>
+</div>
+
+<div class="cols">
+  <div>
+    <section class="panel">
+      <h2 id="slHead">本輪設置</h2>
+      <div class="body" id="sliders"></div>
+      <div class="why" id="recWhy"></div>
+      <div class="actions"><button id="backToRec">回到建議值</button></div>
+    </section>
+  </div>
+
+  <div>
+    <section class="panel">
+      <div class="status"><span class="n mono" id="count">—</span><span class="lbl" id="countLbl">組可能解</span></div>
+      <div class="body" id="dims"></div>
+      <div class="legend">
+        <span><i style="background:var(--band)"></i>可能解分布</span>
+        <span><i style="background:var(--cur)"></i>本輪設置</span>
+        <span><i style="background:var(--mu)"></i>賽道先驗 μ ± 0.038</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>車手回饋</h2>
+      <div class="body" id="feedback"></div>
+      <div class="actions">
+        <button class="primary" id="record">記錄回饋，給下一組</button>
+        <button id="clearFb">清空選擇</button>
+      </div>
+      <p class="warn" id="fbWarn" hidden></p>
+    </section>
+  </div>
+</div>
+
+<section class="panel" style="margin-top:26px">
+  <h2>已記錄的回合</h2>
+  <div id="history"></div>
+  <div class="actions"><button id="reset">清除這台車的回合</button></div>
+</section>
+
+<section class="panel">
+  <h2>賽道先驗資料</h2>
+  <div class="samples" id="samples"></div>
+  <div class="actions"><button id="addPrior">把這組解加入本賽道</button><button id="delPrior">刪掉本賽道最後一筆</button></div>
+</section>
+
+<section class="panel">
+  <h2>存檔與備份</h2>
+  <p class="hint" id="storeHint"></p>
+  <div class="actions">
+    <button class="primary" id="dlFile">下載備份檔</button>
+    <button id="upFile">讀取備份檔</button>
+    <button id="toText">匯出成文字</button>
+    <button id="fromText">匯入貼上的文字</button>
+    <button id="toCode">匯出成程式碼</button>
+  </div>
+  <div class="body" style="padding-top:0"><textarea id="io" spellcheck="false" placeholder="「匯出成文字」的結果會出現在這裡，也可以把備份內容貼進來再按「匯入」。「匯出成程式碼」產生的是可以直接貼回這個 HTML 檔的 TRACKS 定義。"></textarea></div>
+  <input type="file" id="fileIn" accept="application/json,.json" hidden>
+</section>
+
+</div>
+
+<script>
+"use strict";
+
+/* ================= 模型 ================= */
+const SLIDERS=[
+  {k:"A",name:"Front Wing",max:20,fmt:i=>(i*0.5).toFixed(1)+"°",       d:i=>(i*0.5).toFixed(1)+"°",  lo:"0.0°",  hi:"10.0°"},
+  {k:"B",name:"Rear Wing", max:14,fmt:i=>(9+i*0.5).toFixed(1)+"°",     d:i=>(i*0.5).toFixed(1)+"°",  lo:"9.0°",  hi:"16.0°"},
+  {k:"C",name:"Anti-Roll", max:8, fmt:i=>(9-i)+":"+(1+i),              d:i=>i+" 格",                 lo:"9:1",   hi:"1:9"},
+  {k:"D",name:"Camber",    max:16,fmt:i=>(-2.70-i*0.05).toFixed(2)+"°",d:i=>(-i*0.05).toFixed(2)+"°",lo:"-2.70°",hi:"-3.50°"},
+  {k:"E",name:"Toe-Out",   max:20,fmt:i=>(i*0.05).toFixed(2)+"°",      d:i=>(i*0.05).toFixed(2)+"°", lo:"0.00°", hi:"1.00°"},
+];
+const DIMS=[
+  {name:"Oversteer",base:0.5, c:[0.02,  -1/35, -1/80,  1/160, 0]},
+  {name:"Braking",  base:0.45,c:[-0.01,  1/70,  3/160,-1/64,  0.01]},
+  {name:"Cornering",base:0.2, c:[3/200,  1/56, -3/160, 1/64, -1/400]},
+  {name:"Traction", base:0.25,c:[-3/400, 1/56,  1/16, -1/160, 0]},
+  {name:"Straights",base:1,   c:[-1/200,-9/140, 0,     0,     0]},
+];
+const OPT=39/5600, EPS=1e-9, BINS=400, MERGE_GAP=0.02;
+const RATINGS=[
+  {label:"Optimal",lo:0,    hi:OPT},
+  {label:"Great",  lo:OPT,  hi:0.04},
+  {label:"Good",   lo:0.04, hi:0.10},
+  {label:"Bad",    lo:0.10, hi:Infinity},
+];
+// 浮動半寬：22 條賽道 Car1/Car2 配對差，平均 |Δ| 0.0249 → h ≈ 1.5×
+const PRIOR_H=0.038;
+const CENTER=[10,7,4,8,10];
+
+// 賽道母表。setups 是各賽道歷史最終設置（滑桿 index）。
+const TRACKS=[
+  {code:'BHR', key:'bahrain',     name:'Bahrain GP',        circuit:'Sakhir',      setups:[[10,5,3,11,6],[9,5,3,13,8]]},
+  {code:'JED', key:'saudi',       name:'Saudi Arabian GP',  circuit:'Jeddah',      setups:[[13,5,0,16,0],[16,4,1,16,0]]},
+  {code:'AUS', key:'australian',  name:'Australian GP',     circuit:'Albert Park', setups:[]},
+  {code:'SUZ', key:'suzuka',      name:'Japanese GP',       circuit:'Suzuka',      setups:[[14,7,5,16,0],[15,7,5,16,0]]},
+  {code:'SHA', key:'chinese',     name:'Chinese GP',        circuit:'Shanghai',    setups:[[4,5,7,5,18],[8,4,8,0,19]]},
+  {code:'MIA', key:'miami',       name:'Miami GP',          circuit:'Miami',       setups:[]},
+  {code:'IMO', key:'imola',       name:'Emilia Romagna GP', circuit:'Imola',       setups:[[14,7,6,15,1],[12,8,3,16,0]]},
+  {code:'MON', key:'monaco',      name:'Monaco GP',         circuit:'Monte Carlo', setups:[[20,14,2,16,20],[20,14,1,12,13]]},
+  {code:'MTL', key:'montreal',    name:'Canadian GP',       circuit:'Montreal',    setups:[[6,5,7,12,20],[6,5,7,12,19]]},
+  {code:'CAT', key:'catalunya',   name:'Spanish GP',        circuit:'Catalunya',   setups:[[16,11,1,10,12],[15,11,0,5,3]]},
+  {code:'RBR', key:'spielberg',   name:'Austrian GP',       circuit:'Spielberg',   setups:[[9,8,8,11,20],[10,9,8,11,18]]},
+  {code:'SIL', key:'silverstone', name:'British GP',        circuit:'Silverstone', setups:[[11,5,0,10,2],[11,5,1,15,13]]},
+  {code:'HUN', key:'hungaroring', name:'Hungarian GP',      circuit:'Hungaroring', setups:[[18,12,8,14,20],[20,12,7,5,8]]},
+  {code:'SPA', key:'belgian',     name:'Belgian GP',        circuit:'Spa',         setups:[[4,1,5,14,9],[5,2,5,14,12]]},
+  {code:'ZAN', key:'zandvoort',   name:'Dutch GP',          circuit:'Zandvoort',   setups:[[19,9,4,14,20],[19,9,3,11,18]]},
+  {code:'MNZ', key:'monza',       name:'Italian GP',        circuit:'Monza',       setups:[[2,0,7,5,15],[3,0,7,1,10]]},
+  {code:'BAK', key:'baku',        name:'Azerbaijan GP',     circuit:'Baku',        setups:[[4,3,7,6,19],[3,2,7,6,20]]},
+  {code:'SIN', key:'singapore',   name:'Singapore GP',      circuit:'Marina Bay',  setups:[[13,13,0,1,18],[15,13,1,1,19]]},
+  {code:'USA', key:'austin',      name:'United States GP',  circuit:'Austin',      setups:[[17,8,8,16,10],[16,7,8,16,14]]},
+  {code:'MEX', key:'mexico',      name:'Mexico City GP',    circuit:'Mexico City', setups:[[13,8,7,15,6],[13,8,7,15,6]]},
+  {code:'INT', key:'interlagos',  name:'Sao Paulo GP',      circuit:'Interlagos',  setups:[[15,8,7,11,9],[14,8,7,14,11]]},
+  {code:'LAS', key:'lasvegas',    name:'Las Vegas GP',      circuit:'Las Vegas',   setups:[[0,3,8,8,14],[0,3,8,11,20]]},
+  {code:'QAT', key:'losail',      name:'Qatar GP',          circuit:'Losail',      setups:[[15,8,1,10,9],[16,8,2,14,18]]},
+  {code:'YAS', key:'abudhabi',    name:'Abu Dhabi GP',      circuit:'Yas Marina',  setups:[[10,8,4,7,9],[10,7,6,12,20]]},
+];
+const DEFAULT_ORDER=TRACKS.map(t=>t.key);   // 2024 原始賽曆
+let order=DEFAULT_ORDER.slice();            // 本季賽程，可自訂
+const byKey=k=>TRACKS.find(t=>t.key===k);
+
+function values(s){
+  return DIMS.map(d=>d.base+d.c[0]*s[0]+d.c[1]*s[1]+d.c[2]*s[2]+d.c[3]*s[3]+d.c[4]*s[4]);
+}
+function priorMu(t){
+  if(!t||!t.setups.length) return null;
+  const acc=[0,0,0,0,0];
+  t.setups.forEach(s=>values(s).forEach((v,i)=>acc[i]+=v));
+  return acc.map(x=>x/t.setups.length);
+}
+
+/* ================= 存檔 ================= */
+const SKEY="f1m-setup-finder";
+const storage=(()=>{
+  let ok=false;
+  try{ localStorage.setItem(SKEY+"-probe","1"); localStorage.removeItem(SKEY+"-probe"); ok=true; }catch(e){ ok=false; }
+  return {
+    ok,
+    read(){ if(!ok) return null; try{ return JSON.parse(localStorage.getItem(SKEY)||"null"); }catch(e){ return null; } },
+    write(o){ if(!ok) return false; try{ localStorage.setItem(SKEY,JSON.stringify(o)); return true; }catch(e){ return false; } }
+  };
+})();
+function snapshot(){
+  const priors={};
+  TRACKS.forEach(t=>{ if(t.setups.length) priors[t.key]=t.setups; });
+  return {v:1, saved:new Date().toISOString(), order, priors};
+}
+function applySnapshot(o){
+  if(!o||typeof o!=="object") throw new Error("格式不對");
+  if(Array.isArray(o.order)){
+    const valid=o.order.filter(k=>byKey(k));
+    order=valid.concat(DEFAULT_ORDER.filter(k=>!valid.includes(k)));
+  }
+  if(o.priors&&typeof o.priors==="object"){
+    TRACKS.forEach(t=>{
+      const s=o.priors[t.key];
+      if(Array.isArray(s)) t.setups=s.filter(x=>Array.isArray(x)&&x.length===5)
+        .map(x=>x.map((v,i)=>Math.max(0,Math.min(SLIDERS[i].max,Math.round(+v||0)))));
+    });
+  }
+}
+let saveMsg="";
+function save(){
+  if(!storage.ok){ saveMsg=""; renderSaveState(); return; }
+  const okw=storage.write(snapshot());
+  saveMsg = okw ? "已存檔 "+new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"}) : "存檔失敗";
+  renderSaveState();
+}
+function renderSaveState(){
+  const el=$("saveState");
+  if(!storage.ok){ el.className="save off"; el.textContent="此環境不能用瀏覽器儲存 — 請用備份檔"; }
+  else { el.className="save on"; el.textContent=saveMsg||"自動存檔已啟用"; }
+  $("storeHint").textContent = storage.ok
+    ? "先驗資料和賽程會自動存進這個瀏覽器。換裝置、清快取或換網域都會消失，所以每季結束記得下載一次備份檔。"
+    : "這個環境不允許瀏覽器儲存，所有改動只存在這個分頁裡。請用「下載備份檔」保存。";
+}
+
+/* ================= 求解 ================= */
+function ok(list,x){
+  for(let i=0;i<list.length;i++){
+    const c=list[i], d=Math.abs(x-c.v);
+    if(d<c.lo-EPS||d>c.hi+EPS) return false;
+  }
+  return true;
+}
+function forEachCandidate(cons,cb){
+  const O=DIMS[0].c,B=DIMS[1].c,C=DIMS[2].c,T=DIMS[3].c,S=DIMS[4].c;
+  const v=[0,0,0,0,0];
+  for(let a=0;a<21;a++){
+    const oa=DIMS[0].base+a*O[0], ba=DIMS[1].base+a*B[0], ca=DIMS[2].base+a*C[0], ta=DIMS[3].base+a*T[0];
+    for(let b=0;b<15;b++){
+      const sv=DIMS[4].base+a*S[0]+b*S[1];
+      if(!ok(cons[4],sv)) continue;                    // Straights 只吃 A、B
+      const ob=oa+b*O[1], bb=ba+b*B[1], cb2=ca+b*C[1], tb=ta+b*T[1];
+      for(let c=0;c<9;c++){
+        const oc=ob+c*O[2], bc=bb+c*B[2], cc=cb2+c*C[2], tc=tb+c*T[2];
+        for(let d=0;d<17;d++){
+          const ov=oc+d*O[3]; if(!ok(cons[0],ov)) continue;   // Oversteer 不吃 E
+          const tv=tc+d*T[3]; if(!ok(cons[3],tv)) continue;   // Traction 不吃 E
+          const bd=bc+d*B[3], cd=cc+d*C[3];
+          for(let e=0;e<21;e++){
+            const bv=bd+e*B[4]; if(!ok(cons[1],bv)) continue;
+            const cv=cd+e*C[4]; if(!ok(cons[2],cv)) continue;
+            v[0]=ov;v[1]=bv;v[2]=cv;v[3]=tv;v[4]=sv;
+            cb(a,b,c,d,e,v);
+          }
+        }
+      }
+    }
+  }
+}
+function solve(cons,mu){
+  let n=0;
+  const sum=[0,0,0,0,0], mn=[9,9,9,9,9], mx=[-9,-9,-9,-9,-9];
+  const bins=new Int32Array(5*BINS);
+  forEachCandidate(cons,(a,b,c,d,e,v)=>{
+    n++;
+    for(let i=0;i<5;i++){
+      const x=v[i]; sum[i]+=x;
+      if(x<mn[i])mn[i]=x; if(x>mx[i])mx[i]=x;
+      let k=(x*BINS)|0; if(k>=BINS)k=BINS-1; if(k<0)k=0;
+      bins[i*BINS+k]++;
+    }
+  });
+  if(n===0) return {n:0};
+  const mean=sum.map(x=>x/n);
+  const ref = mu || mean;               // 有先驗按離 μ 的距離排序，否則取幾何中心
+  let best=null,bd=Infinity;
+  forEachCandidate(cons,(a,b,c,d,e,v)=>{
+    let dd=0;
+    for(let i=0;i<5;i++){const t=v[i]-ref[i]; dd+=t*t;}
+    if(dd<bd){bd=dd; best=[a,b,c,d,e];}
+  });
+  return {n,min:mn,max:mx,mean,best,bins,usedPrior:!!mu};
+}
+function nearestGrid(mu){
+  let best=null,bd=Infinity;
+  forEachCandidate([[],[],[],[],[]],(a,b,c,d,e,v)=>{
+    let dd=0; for(let i=0;i<5;i++){const t=v[i]-mu[i]; dd+=t*t;}
+    if(dd<bd){bd=dd; best=[a,b,c,d,e];}
+  });
+  return best;
+}
+function segments(bins,dim,n){
+  const raw=[]; let s=-1,acc=0;
+  for(let k=0;k<BINS;k++){
+    const c=bins[dim*BINS+k];
+    if(c>0){ if(s<0){s=k;acc=0;} acc+=c; }
+    else if(s>=0){ raw.push({a:s/BINS,b:k/BINS,share:acc/n}); s=-1; }
+  }
+  if(s>=0) raw.push({a:s/BINS,b:1,share:acc/n});
+  const out=[];
+  for(const r of raw){
+    const last=out[out.length-1];
+    if(last && r.a-last.b < MERGE_GAP-EPS){ last.b=r.b; last.share+=r.share; }
+    else out.push({...r});
+  }
+  return out;
+}
+
+/* ================= 狀態 ================= */
+function newCar(){return {setup:CENTER.slice(),pending:[null,null,null,null,null],history:[],result:null};}
+let cars=[newCar(),newCar()];
+let active=0, ri=0, usePrior=true, busy=false;
+const C=()=>cars[active];
+const T=()=>byKey(order[ri]);
+const MU=()=>usePrior?priorMu(T()):null;
+const lastSetup=()=>C().history.length?C().history[C().history.length-1].setup:null;
+
+function constraintsOf(car){
+  const cons=[[],[],[],[],[]];
+  for(const h of car.history){
+    const v=values(h.setup);
+    h.ratings.forEach((r,i)=>{ if(r!==null) cons[i].push({v:v[i],lo:RATINGS[r].lo,hi:RATINGS[r].hi}); });
+  }
+  return cons;
+}
+
+/* ================= 介面 ================= */
+const $=id=>document.getElementById(id);
+
+function buildStatic(){
+  $("cal").addEventListener("click",e=>{
+    const b=e.target.closest(".rnd"); if(!b) return; gotoRound(+b.dataset.i);
+  });
+
+  $("sliders").innerHTML=SLIDERS.map((s,i)=>`
+    <div class="sl" id="sl${i}">
+      <div class="sl-top"><span class="badge">${s.k}</span><span class="sl-name">${s.name}</span>
+        <span class="delta mono" id="sd${i}" hidden></span><span class="sl-val mono" id="sv${i}"></span></div>
+      <input type="range" min="0" max="${s.max}" step="1" id="sr${i}" aria-label="${s.name}">
+      <div class="sl-foot"><span>${s.lo}</span><span class="mono" id="si${i}"></span><span>${s.hi}</span></div>
+    </div>`).join("");
+  SLIDERS.forEach((s,i)=>$("sr"+i).addEventListener("input",ev=>{
+    C().setup[i]=+ev.target.value; renderSliders(); renderDims();
+  }));
+
+  $("dims").innerHTML=DIMS.map((d,i)=>`
+    <div class="dim">
+      <div class="dim-name">${d.name}</div>
+      <div class="track" id="tk${i}">
+        <div class="whisk" id="wk${i}"></div>
+        <div class="mark mu" id="mm${i}"></div>
+        <div class="mark cur" id="mc${i}"></div>
+      </div>
+      <div class="dim-num"><span class="v" id="dv${i}"></span><span class="r" id="dr${i}"></span><span class="split" id="ds${i}"></span></div>
+    </div>`).join("");
+
+  $("feedback").innerHTML=DIMS.map((d,i)=>`
+    <div class="fb"><div class="fb-name">${d.name}</div><div class="opts">
+      ${RATINGS.map((r,j)=>`<button class="opt" data-r="${j}" data-dim="${i}" aria-pressed="false">${r.label}</button>`).join("")}
+      <button class="opt" data-r="-1" data-dim="${i}" aria-pressed="true">未收到</button>
+    </div></div>`).join("");
+  $("feedback").addEventListener("click",ev=>{
+    const b=ev.target.closest(".opt"); if(!b) return;
+    C().pending[+b.dataset.dim] = (+b.dataset.r)<0 ? null : +b.dataset.r;
+    renderPending();
+  });
+}
+
+function renderCal(){
+  $("cal").innerHTML=order.map((k,i)=>{
+    const t=byKey(k);
+    return `<button class="rnd" data-i="${i}" aria-current="${i===ri}"><span class="r">R${i+1}</span><span class="c">${t.code}</span>${t.setups.length?'<span class="dot"></span>':''}</button>`;
+  }).join("");
+}
+function renderEditor(){
+  $("editorBody").innerHTML=order.map((k,i)=>{
+    const t=byKey(k);
+    return `<div class="erow">
+      <input type="number" min="1" max="${order.length}" value="${i+1}" data-i="${i}" aria-label="${t.name} 輪次">
+      <span class="cd">${t.code}</span><span class="nm">${t.circuit}</span>
+      <button class="mv" data-mv="-1" data-i="${i}" ${i===0?"disabled":""}>↑</button>
+      <button class="mv" data-mv="1" data-i="${i}" ${i===order.length-1?"disabled":""}>↓</button>
+    </div>`;
+  }).join("");
+}
+function moveRound(from,to){
+  to=Math.max(0,Math.min(order.length-1,to));
+  if(from===to) return;
+  const cur=order[ri];
+  const [k]=order.splice(from,1);
+  order.splice(to,0,k);
+  ri=order.indexOf(cur);
+  save(); renderCal(); renderEditor(); renderTrack();
+}
+
+function renderSliders(){
+  const prev=lastSetup();
+  SLIDERS.forEach((s,i)=>{
+    $("sv"+i).textContent=s.fmt(C().setup[i]);
+    $("si"+i).textContent="index "+C().setup[i];
+    $("sr"+i).value=C().setup[i];
+    const d=prev?C().setup[i]-prev[i]:0;
+    $("sl"+i).classList.toggle("changed",d!==0);
+    const chip=$("sd"+i);
+    if(d!==0){ chip.hidden=false; chip.textContent=(d>0?"+":"−")+s.d(Math.abs(d)); }
+    else chip.hidden=true;
+  });
+  $("slHead").textContent = C().history.length ? "下一組設置（黃色＝與上一輪不同）" : "本輪設置";
+  const res=C().result;
+  $("backToRec").disabled = !(res&&res.best&&res.best.some((x,i)=>x!==C().setup[i]));
+}
+function renderPending(){
+  document.querySelectorAll(".opt").forEach(b=>{
+    const dim=+b.dataset.dim, r=+b.dataset.r;
+    const sel=C().pending[dim]===null?-1:C().pending[dim];
+    b.setAttribute("aria-pressed", sel===r?"true":"false");
+  });
+  $("record").disabled=C().pending.every(p=>p===null);
+}
+function renderDims(){
+  const res=C().result, cur=values(C().setup), mu=MU();
+  DIMS.forEach((d,i)=>{
+    $("dv"+i).textContent=cur[i].toFixed(4);
+    $("mc"+i).style.left=(cur[i]*100)+"%";
+    document.querySelectorAll("#tk"+i+" .seg").forEach(el=>el.remove());
+    if(res&&res.n>0){
+      const segs=segments(res.bins,i,res.n), tk=$("tk"+i);
+      segs.forEach(s=>{
+        const el=document.createElement("div");
+        el.className="seg";
+        el.style.left=(s.a*100)+"%";
+        el.style.width=Math.max((s.b-s.a)*100,0.4)+"%";
+        el.style.opacity=(0.14+0.34*Math.min(s.share,1)).toFixed(3);
+        tk.insertBefore(el,tk.firstChild);
+      });
+      $("dr"+i).textContent=res.min[i].toFixed(3)+"–"+res.max[i].toFixed(3);
+      $("ds"+i).textContent = segs.length>1
+        ? segs.length+" 段 · "+segs.slice(0,3).map(s=>Math.round(s.share*100)+"%").join("/")+(segs.length>3?"…":"")
+        : "";
+    }else{ $("dr"+i).textContent="—"; $("ds"+i).textContent=""; }
+    if(mu){
+      $("mm"+i).style.left=(mu[i]*100)+"%"; $("mm"+i).style.display="";
+      const lo=Math.max(0,mu[i]-PRIOR_H), hi=Math.min(1,mu[i]+PRIOR_H);
+      $("wk"+i).style.left=(lo*100)+"%"; $("wk"+i).style.width=((hi-lo)*100)+"%"; $("wk"+i).style.display="";
+    }else{ $("mm"+i).style.display="none"; $("wk"+i).style.display="none"; }
+  });
+}
+function renderWhy(){
+  const res=C().result, mu=MU();
+  if(!res||res.n===0){ $("recWhy").textContent=""; return; }
+  if(res.n===1){ $("recWhy").innerHTML="只剩一組解，上面就是本場的最終設置。"; return; }
+  if(!mu){ $("recWhy").textContent="沒有可用的賽道先驗，改取剩餘解集合的幾何中心。"; return; }
+  const rv=values(res.best);
+  const out=DIMS.map((d,i)=>Math.abs(rv[i]-mu[i])>PRIOR_H+EPS?d.name:null).filter(Boolean);
+  $("recWhy").innerHTML = out.length
+    ? `依先驗排序。<em>${out.join("、")}</em> 已被回饋推出 μ ± ${PRIOR_H} 之外 — 這幾維改以資料為準。`
+    : `依先驗排序，五維都落在 <b>μ ± ${PRIOR_H}</b> 內。`;
+}
+function renderStatus(){
+  const res=C().result, n=$("count"), l=$("countLbl");
+  n.className="n mono";
+  if(busy){ n.textContent="…"; n.classList.add("busy"); l.textContent="計算中"; return; }
+  if(!res||res.n===0){ n.textContent="0"; n.classList.add("dead"); l.textContent="回饋互相矛盾，刪掉最近一筆再試"; }
+  else if(res.n===1){ n.textContent="1"; n.classList.add("solved"); l.textContent="組可能解 — 已鎖定"; }
+  else { n.textContent=res.n.toLocaleString("en-US"); l.textContent="組可能解"; }
+}
+function renderHistory(){
+  const el=$("history"), car=C();
+  cars.forEach((c,i)=>$("tn"+i).textContent=c.history.length?c.history.length+" 回合":"");
+  if(!car.history.length){
+    el.innerHTML=`<p class="empty">還沒有紀錄。照上面的設置跑出去，把車手給的評價填進來。</p>`; return;
+  }
+  el.innerHTML=car.history.map((h,idx)=>`
+    <div class="hrow">
+      <span class="no">${idx+1}</span>
+      <span class="setup">${h.setup.map((x,i)=>SLIDERS[i].k+x).join(" ")}</span>
+      <span class="tags">${h.ratings.map((r,i)=>r===null?"":`<span class="tag" data-r="${r}">${DIMS[i].name.slice(0,4)} ${RATINGS[r].label}</span>`).join("")}</span>
+      <button class="del" data-idx="${idx}">刪除</button>
+    </div>`).join("");
+  el.querySelectorAll(".del").forEach(b=>b.addEventListener("click",()=>{
+    car.history.splice(+b.dataset.idx,1); recompute();
+  }));
+}
+function renderTrack(){
+  const t=T(), mu=priorMu(t);
+  document.querySelectorAll(".rnd").forEach((b,i)=>b.setAttribute("aria-current", i===ri?"true":"false"));
+  $("tname").innerHTML=`<span class="rn">R${ri+1}</span>${t.circuit}<span class="gp">${t.name}</span>`;
+  $("pstat").innerHTML = t.setups.length
+    ? `${t.setups.length} 筆樣本 · μ = <b>${mu.map(x=>x.toFixed(3)).join("  ")}</b>`
+    : `沒有紀錄 — 起手用中性值，選點退回幾何中心`;
+  $("samples").innerHTML = t.setups.length
+    ? t.setups.map((s,i)=>`${String(i+1).padStart(2)}　${s.map((x,j)=>SLIDERS[j].k+String(x).padStart(2)).join(" ")}　→　${values(s).map(v=>v.toFixed(3)).join("  ")}`).join("<br>")
+    : `<span style="color:var(--faint)">收斂到 1 組解之後，按下方按鈕把結果存進這條賽道。</span>`;
+  const res=C().result;
+  $("addPrior").disabled=!(res&&res.n===1);
+  $("delPrior").disabled=!t.setups.length;
+  $("prevR").disabled=ri===0; $("nextR").disabled=ri===order.length-1;
+}
+
+function render(){ renderSliders(); renderPending(); renderStatus(); renderDims(); renderWhy(); renderHistory(); renderTrack(); }
+
+function recompute(){
+  busy=true; renderStatus();
+  requestAnimationFrame(()=>{
+    C().result=solve(constraintsOf(C()),MU());
+    busy=false; render();
+  });
+}
+function seedFromPrior(){
+  const mu=MU();
+  const s = mu?nearestGrid(mu):CENTER.slice();
+  cars.forEach(c=>{ if(!c.history.length) c.setup=s.slice(); });
+}
+function gotoRound(i){
+  if(i<0||i>=order.length) return;
+  ri=i;
+  cars=[newCar(),newCar()];      // 換賽道＝全新一場
+  active=0;
+  $("tab0").setAttribute("aria-selected","true"); $("tab1").setAttribute("aria-selected","false");
+  $("fbWarn").hidden=true;
+  seedFromPrior();
+  renderCal();
+  document.querySelectorAll(".rnd")[i].scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});
+  recompute();
+}
+
+/* ================= 事件 ================= */
+$("prevR").addEventListener("click",()=>gotoRound(ri-1));
+$("nextR").addEventListener("click",()=>gotoRound(ri+1));
+$("editCal").addEventListener("click",()=>{
+  const e=$("editor"); e.hidden=!e.hidden; if(!e.hidden) renderEditor();
+});
+$("closeCal").addEventListener("click",()=>{ $("editor").hidden=true; });
+$("resetCal").addEventListener("click",()=>{
+  const cur=order[ri]; order=DEFAULT_ORDER.slice(); ri=order.indexOf(cur);
+  save(); renderCal(); renderEditor(); renderTrack();
+});
+$("editorBody").addEventListener("click",e=>{
+  const b=e.target.closest(".mv"); if(!b) return;
+  const i=+b.dataset.i; moveRound(i,i+ +b.dataset.mv);
+});
+$("editorBody").addEventListener("change",e=>{
+  if(e.target.type!=="number") return;
+  moveRound(+e.target.dataset.i, (+e.target.value)-1);
+});
+$("usePrior").addEventListener("change",e=>{ usePrior=e.target.checked; seedFromPrior(); recompute(); });
+[0,1].forEach(i=>$("tab"+i).addEventListener("click",()=>{
+  active=i; $("tab0").setAttribute("aria-selected",i===0); $("tab1").setAttribute("aria-selected",i===1);
+  recompute();
+}));
+$("record").addEventListener("click",()=>{
+  const before=C().result?C().result.n:0;
+  C().history.push({setup:C().setup.slice(),ratings:C().pending.slice()});
+  C().pending=[null,null,null,null,null];
+  busy=true; renderStatus();
+  requestAnimationFrame(()=>{
+    const res=solve(constraintsOf(C()),MU());
+    C().result=res;
+    if(res.n>0) C().setup=res.best.slice();      // 直接套用下一組建議
+    busy=false; render();
+    const w=$("fbWarn");
+    if(res.n===0){
+      w.textContent="這筆回饋和之前的紀錄無法同時成立，多半是某一格點錯了。到下面把可疑的那筆刪掉。";
+      w.hidden=false;
+    }else if(before===res.n&&before>1){
+      w.textContent="可能解沒有減少：這組設置在五個維度上和先前等價。手動把滑桿拉開一點再跑一輪。";
+      w.hidden=false;
+    }else w.hidden=true;
+  });
+});
+$("clearFb").addEventListener("click",()=>{ C().pending=[null,null,null,null,null]; renderPending(); $("fbWarn").hidden=true; });
+$("backToRec").addEventListener("click",()=>{
+  const res=C().result; if(!res||!res.best) return;
+  C().setup=res.best.slice(); renderSliders(); renderDims();
+});
+$("reset").addEventListener("click",()=>{
+  cars[active]=newCar(); seedFromPrior(); $("fbWarn").hidden=true; recompute();
+});
+$("addPrior").addEventListener("click",()=>{
+  const res=C().result; if(!res||res.n!==1) return;
+  T().setups.push(res.best.slice()); save(); renderCal(); renderTrack(); renderDims(); renderWhy();
+});
+$("delPrior").addEventListener("click",()=>{
+  const t=T(); if(!t.setups.length) return;
+  t.setups.pop(); save(); renderCal(); renderTrack(); renderDims(); renderWhy(); seedFromPrior(); recompute();
+});
+
+/* ---- 備份 ---- */
+$("dlFile").addEventListener("click",()=>{
+  const txt=JSON.stringify(snapshot(),null,1);
+  const url=URL.createObjectURL(new Blob([txt],{type:"application/json"}));
+  const a=document.createElement("a");
+  a.href=url; a.download="f1m-setup-finder-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+});
+$("upFile").addEventListener("click",()=>$("fileIn").click());
+$("fileIn").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{ applySnapshot(JSON.parse(rd.result)); save(); renderCal(); seedFromPrior(); recompute();
+         $("io").value="已從 "+f.name+" 讀入。"; }
+    catch(err){ $("io").value="讀取失敗："+err.message; }
+  };
+  rd.readAsText(f); e.target.value="";
+});
+$("toText").addEventListener("click",()=>{ $("io").value=JSON.stringify(snapshot()); });
+$("fromText").addEventListener("click",()=>{
+  try{ applySnapshot(JSON.parse($("io").value)); save(); renderCal(); seedFromPrior(); recompute();
+       $("io").value="匯入成功。"; }
+  catch(err){ $("io").value="匯入失敗："+err.message; }
+});
+$("toCode").addEventListener("click",()=>{
+  const pad=(s,n)=>(s+"'").padEnd(n," ");
+  $("io").value="const TRACKS=[\n"+order.map(k=>{
+    const t=byKey(k);
+    return "  {code:'"+t.code+"', key:"+pad("'"+t.key,15)+", name:"+pad("'"+t.name,26)+", circuit:"+pad("'"+t.circuit,16)+", setups:["
+      +t.setups.map(s=>"["+s.join(",")+"]").join(",")+"]},";
+  }).join("\n")+"\n];";
+});
+
+/* ================= 啟動 ================= */
+buildStatic();
+try{ const saved=storage.read(); if(saved) applySnapshot(saved); }catch(e){}
+renderSaveState();
+renderCal();
+seedFromPrior();
+recompute();
+</script>
+</body>
+</html>
