@@ -157,6 +157,14 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .del:hover{color:var(--bad);border:none}
 .empty{color:var(--faint);font-size:13px;padding:14px}
 .badge2{font-family:var(--mono);font-size:11px;color:#0c151d;background:var(--rec);padding:1px 6px;margin-left:6px}
+.sl.locked{opacity:.42}
+.sl.locked .sl-name::after{content:" 鎖定";color:var(--faint);font-size:11px}
+.sprint{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--dim);cursor:pointer;margin-left:auto}
+.sprint input{accent-color:var(--rec);width:15px;height:15px}
+.sprint.on{color:var(--rec)}
+.aopts{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.aopt{font-family:var(--mono);font-size:11px;border:1px solid var(--line);padding:2px 6px;color:var(--dim)}
+.aopt.best{border-color:var(--rec);color:var(--rec)}
 .lsec{font-size:11.5px;color:var(--faint);padding:10px 14px 4px;letter-spacing:.3px}
 .lrow{display:flex;align-items:center;gap:10px;padding:7px 14px;font-size:12.5px;flex-wrap:wrap}
 .lrow + .lrow{border-top:1px solid var(--line-soft)}
@@ -204,6 +212,7 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
 <div class="tabs" role="tablist">
   <button class="tab" role="tab" id="tab0" aria-selected="true">Car 1<span class="n" id="tn0"></span></button>
   <button class="tab" role="tab" id="tab1" aria-selected="false">Car 2<span class="n" id="tn1"></span></button>
+  <label class="sprint" id="sprintLbl"><input type="checkbox" id="sprintMode">Sprint 週末（只能動 Front Wing）</label>
 </div>
 
 <div class="cols">
@@ -312,12 +321,12 @@ const TRACKS=[
   {code:'SUZ', key:'suzuka',       name:'Japanese GP',             circuit:'Suzuka',        setups:[[14,7,5,16,0],[15,7,5,16,0]]},
   {code:'SHA', key:'chinese',      name:'Chinese GP',              circuit:'Shanghai',      setups:[[4,5,7,5,18],[8,4,8,0,19]]},
   {code:'MIA', key:'miami',        name:'Miami GP',                circuit:'Miami',         setups:[[15,8,7,15,8],[16,8,8,16,10]]},
-  {code:'IMO', key:'imola',        name:'Emilia Romagna GP',       circuit:'Imola',         setups:[[14,7,6,15,1],[12,8,3,16,0]]},
-  {code:'MON', key:'monaco',       name:'Monaco GP',               circuit:'Monte Carlo',   setups:[[20,14,2,16,20],[20,14,1,12,13]]},
+  {code:'IMO', key:'imola',        name:'Emilia Romagna GP',       circuit:'Imola',         setups:[[14,7,6,15,1],[12,8,3,16,0],[13,7,5,16,1],[12,8,3,15,0]]},
+  {code:'MON', key:'monaco',       name:'Monaco GP',               circuit:'Monte Carlo',   setups:[[20,14,2,16,20],[20,14,1,12,13],[20,14,2,16,20],[20,14,0,9,5]]},
   {code:'MTL', key:'montreal',     name:'Canadian GP',             circuit:'Montreal',      setups:[[6,5,7,12,20],[6,5,7,12,19],[6,6,6,9,14],[9,5,8,9,20]]},
-  {code:'CAT', key:'catalunya',    name:'Spanish GP',              circuit:'Catalunya',     setups:[[16,11,1,10,12],[15,11,0,5,3]]},
+  {code:'CAT', key:'catalunya',    name:'Spanish GP',              circuit:'Catalunya',     setups:[[16,11,1,10,12],[15,11,0,5,3],[17,11,0,2,0],[15,11,0,7,6]]},
   {code:'RBR', key:'spielberg',    name:'Austrian GP',             circuit:'Spielberg',     setups:[[9,8,8,11,20],[10,9,8,11,18]]},
-  {code:'SIL', key:'silverstone',  name:'British GP',              circuit:'Silverstone',   setups:[[11,5,0,10,2],[11,5,1,15,13]]},
+  {code:'SIL', key:'silverstone',  name:'British GP',              circuit:'Silverstone',   setups:[[11,5,0,10,2],[11,5,1,15,13],[12,5,0,9,4],[12,5,0,8,1]]},
   {code:'HUN', key:'hungaroring',  name:'Hungarian GP',            circuit:'Hungaroring',   setups:[[18,12,8,14,20],[20,12,7,5,8]]},
   {code:'SPA', key:'belgian',      name:'Belgian GP',              circuit:'Spa',           setups:[[4,1,5,14,9],[5,2,5,14,12],[5,2,4,11,3],[6,2,4,10,4]]},
   {code:'ZAN', key:'zandvoort',    name:'Dutch GP',                circuit:'Zandvoort',     setups:[[19,9,4,14,20],[19,9,3,11,18]]},
@@ -481,7 +490,7 @@ function segments(bins,dim,n){
 /* ================= 狀態 ================= */
 function newCar(){return {setup:CENTER.slice(),pending:[null,null,null,null,null],history:[],result:null};}
 let cars=[newCar(),newCar()];
-let active=0, ri=0, usePrior=true, busy=false;
+let active=0, ri=0, usePrior=true, busy=false, sprint=false;
 const C=()=>cars[active];
 const T=()=>byKey(order[ri]);
 const MU=()=>usePrior?priorMu(T()):null;
@@ -496,6 +505,29 @@ function constraintsOf(car){
   return cons;
 }
 
+function rateOf(d){ for(let i=0;i<4;i++) if(d<=RATINGS[i].hi+EPS) return i; return 3; }
+// Sprint：B–E 鎖死，只能動 A。挑「預期剩餘解最少」的那格，而不是最靠近先驗的那格
+const SPRINT_CAP=30000;
+function sprintOptions(cons,base,n){
+  const stride=Math.max(1,Math.ceil(n/SPRINT_CAP));
+  const cands=[]; let i=0;
+  forEachCandidate(cons,(a,b,c,d,e,v)=>{ if(i++%stride===0) cands.push(v.slice()); });
+  const M=cands.length; if(!M) return [];
+  const opts=[];
+  for(let A=0;A<=SLIDERS[0].max;A++){
+    const tv=values([A,base[1],base[2],base[3],base[4]]);
+    const map=new Map();
+    for(let j=0;j<M;j++){
+      const c=cands[j]; let sig=0;
+      for(let k=0;k<5;k++) sig=sig*4+rateOf(Math.abs(tv[k]-c[k]));
+      map.set(sig,(map.get(sig)||0)+1);
+    }
+    let ss=0; for(const m of map.values()) ss+=m*m;
+    opts.push({a:A, exp:n*ss/(M*M), splits:map.size});
+  }
+  opts.sort((x,y)=>x.exp-y.exp || x.splits-y.splits);
+  return opts;
+}
 function sameSetup(a,b){ return a.every((x,i)=>x===b[i]); }
 function inPriors(key,s){ const t=byKey(key); return !!t&&t.setups.some(x=>sameSetup(x,s)); }
 function pushLog(e){ log.push(e); if(log.length>LOG_MAX) log=log.slice(-LOG_MAX); save(); }
@@ -593,9 +625,17 @@ function renderSliders(){
     if(d!==0){ chip.hidden=false; chip.textContent=(d>0?"+":"−")+s.d(Math.abs(d)); }
     else chip.hidden=true;
   });
-  $("slHead").textContent = C().history.length ? "下一組設置（黃色＝與上一輪不同）" : "本輪設置";
+  SLIDERS.forEach((s,i)=>{
+    const lock = sprint && i>0;
+    $("sl"+i).classList.toggle("locked",lock);
+    $("sr"+i).disabled=lock;
+  });
+  $("slHead").textContent = sprint
+    ? "Sprint：只能動 Front Wing"
+    : (C().history.length ? "下一組設置（黃色＝與上一輪不同）" : "本輪設置");
   const res=C().result;
-  $("backToRec").disabled = !(res&&res.best&&res.best.some((x,i)=>x!==C().setup[i]));
+  const rc=res&&res.n>0?recommended():null;
+  $("backToRec").disabled = !(rc&&rc.some((x,i)=>x!==C().setup[i]));
 }
 function renderPending(){
   document.querySelectorAll(".opt").forEach(b=>{
@@ -637,6 +677,17 @@ function renderWhy(){
   const res=C().result, mu=MU();
   if(!res||res.n===0){ $("recWhy").textContent=""; return; }
   if(res.n===1){ $("recWhy").innerHTML="只剩一組解，上面就是本場的最終設置。"; return; }
+  if(sprint&&res.sprint&&res.sprint.length){
+    const o=res.sprint, best=o[0], worst=o[o.length-1];
+    const chips=o.slice(0,5).map((x,i)=>
+      `<span class="aopt${i===0?" best":""}">${SLIDERS[0].fmt(x.a)} → 剩 ${x.exp<10?x.exp.toFixed(1):Math.round(x.exp)}</span>`).join("");
+    $("recWhy").innerHTML=
+      `B–E 已鎖定，只剩 A 可動。挑的是<em>期望剩餘解最少</em>的那格，不是最靠近先驗的那格 — `
+      +`目前 ${res.n.toLocaleString("en-US")} 組，最好的 A 可壓到 ${best.exp<10?best.exp.toFixed(1):Math.round(best.exp)}，`
+      +`最差的只能壓到 ${worst.exp<10?worst.exp.toFixed(1):Math.round(worst.exp)}。`
+      +`<div class="aopts">${chips}</div>`;
+    return;
+  }
   if(!mu){ $("recWhy").textContent="沒有可用的賽道先驗，改取剩餘解集合的幾何中心。"; return; }
   const rv=values(res.best);
   const out=DIMS.map((d,i)=>Math.abs(rv[i]-mu[i])>PRIOR_H+EPS?d.name:null).filter(Boolean);
@@ -727,8 +778,23 @@ function recompute(){
   busy=true; renderStatus();
   requestAnimationFrame(()=>{
     C().result=solve(constraintsOf(C()),MU());
+    attachSprint();
     busy=false; render();
   });
+}
+function attachSprint(){
+  const res=C().result;
+  if(!res||res.n<1||!sprint){ if(res) res.sprint=null; return; }
+  res.sprint=sprintOptions(constraintsOf(C()),C().setup,res.n);
+}
+// 目前該採用的設置：Sprint 模式下只換 A，其餘沿用鎖定值
+function recommended(){
+  const res=C().result;
+  if(!res||res.n<1) return C().setup.slice();
+  if(sprint&&res.sprint&&res.sprint.length){
+    const s=C().setup.slice(); s[0]=res.sprint[0].a; return s;
+  }
+  return res.best.slice();
 }
 function seedFromPrior(){
   const mu=MU();
@@ -779,11 +845,11 @@ $("record").addEventListener("click",()=>{
   busy=true; renderStatus();
   requestAnimationFrame(()=>{
     const res=solve(constraintsOf(C()),MU());
-    C().result=res;
+    C().result=res; attachSprint();
     const rec=C().history[C().history.length-1];
     pushLog({t:Date.now(), track:order[ri], car:active, setup:rec.setup.slice(),
              ratings:rec.ratings.slice(), n:res.n, solved:res.n===1?res.best.slice():null});
-    if(res.n>0) C().setup=res.best.slice();      // 直接套用下一組建議
+    if(res.n>0) C().setup=recommended();         // 直接套用下一組建議
     busy=false; render();
     const w=$("fbWarn");
     if(res.n===0){
@@ -797,8 +863,13 @@ $("record").addEventListener("click",()=>{
 });
 $("clearFb").addEventListener("click",()=>{ C().pending=[null,null,null,null,null]; renderPending(); $("fbWarn").hidden=true; });
 $("backToRec").addEventListener("click",()=>{
-  const res=C().result; if(!res||!res.best) return;
-  C().setup=res.best.slice(); renderSliders(); renderDims();
+  const res=C().result; if(!res||res.n<1) return;
+  C().setup=recommended(); renderSliders(); renderDims();
+});
+$("sprintMode").addEventListener("change",e=>{
+  sprint=e.target.checked;
+  $("sprintLbl").classList.toggle("on",sprint);
+  recompute();
 });
 $("reset").addEventListener("click",()=>{
   cars[active]=newCar(); seedFromPrior(); $("fbWarn").hidden=true; recompute();
