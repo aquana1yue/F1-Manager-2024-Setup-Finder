@@ -165,6 +165,16 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .aopts{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
 .aopt{font-family:var(--mono);font-size:11px;border:1px solid var(--line);padding:2px 6px;color:var(--dim)}
 .aopt.best{border-color:var(--rec);color:var(--rec)}
+.fbfor{display:flex;align-items:center;gap:8px;padding:8px 0 10px;margin-bottom:4px;
+  border-bottom:1px solid var(--line-soft);font-size:12px;color:var(--faint);flex-wrap:wrap}
+.fbfor b{font-family:var(--mono);font-size:12.5px;color:var(--text);font-weight:400}
+.diag{padding:12px 14px;border-top:1px solid var(--line-soft);font-size:13px;line-height:1.65}
+.diag .hd{color:var(--bad);margin-bottom:8px}
+.diag .fix{display:flex;align-items:center;gap:10px;padding:6px 0;flex-wrap:wrap}
+.diag .fix .s{font-family:var(--mono);font-size:12.5px;color:var(--great)}
+.diag .fix .w{color:var(--faint);font-size:12px}
+.diag button{padding:4px 10px;font-size:12px;border-color:var(--great);color:var(--great)}
+.diag button:hover{background:var(--great);color:#0c151d}
 .lsec{font-size:11.5px;color:var(--faint);padding:10px 14px 4px;letter-spacing:.3px}
 .lrow{display:flex;align-items:center;gap:10px;padding:7px 14px;font-size:12.5px;flex-wrap:wrap}
 .lrow + .lrow{border-top:1px solid var(--line-soft)}
@@ -238,7 +248,7 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
 
     <section class="panel">
       <h2>車手回饋</h2>
-      <div class="body" id="feedback"></div>
+      <div class="body"><div class="fbfor" id="fbFor"></div><div id="feedback"></div></div>
       <div class="actions">
         <button class="primary" id="record">記錄回饋，給下一組</button>
         <button id="clearFb">清空選擇</button>
@@ -251,6 +261,7 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
 <section class="panel" style="margin-top:26px">
   <h2>已記錄的回合</h2>
   <div id="history"></div>
+  <div class="diag" id="diag" hidden></div>
   <div class="actions"><button id="reset">清除這台車的回合</button></div>
 </section>
 
@@ -303,12 +314,17 @@ const DIMS=[
   {name:"Straights",base:1,   c:[-1/200,-9/140, 0,     0,     0]},
 ];
 const OPT=39/5600, EPS=1e-9, BINS=400, MERGE_GAP=0.02;
+// Great/Good 的分界由 9 場已確認資料推得，落在 (459/11200, 462/11200]。
+// 真值未知，因此兩側都取到不確定區間的端點 — 寧可多留候選，也不誤刪真解。
+const GG_LO=459/11200, GG_HI=462/11200;   // 0.040982 / 0.041250
 const RATINGS=[
-  {label:"Optimal",lo:0,    hi:OPT},
-  {label:"Great",  lo:OPT,  hi:0.04},
-  {label:"Good",   lo:0.04, hi:0.10},
-  {label:"Bad",    lo:0.10, hi:Infinity},
+  {label:"Optimal",lo:0,     hi:OPT},
+  {label:"Great",  lo:OPT,   hi:GG_HI},
+  {label:"Good",   lo:GG_LO, hi:0.10},
+  {label:"Bad",    lo:0.10,  hi:Infinity},
 ];
+// 需要「唯一分級」時（Sprint 選點、回推修正）用的點值切分
+const CUT=[OPT, (GG_LO+GG_HI)/2, 0.10];
 // 浮動半寬：24 條賽道、27 組配對差，平均 |Δ| 0.0251 → h ≈ 1.5×（分布比均勻更集中於 0）
 const PRIOR_H=0.038;
 const CENTER=[10,7,4,8,10];
@@ -325,7 +341,7 @@ const TRACKS=[
   {code:'MON', key:'monaco',       name:'Monaco GP',               circuit:'Monte Carlo',   setups:[[20,14,2,16,20],[20,14,1,12,13],[20,14,2,16,20],[20,14,0,9,5]]},
   {code:'MTL', key:'montreal',     name:'Canadian GP',             circuit:'Montreal',      setups:[[6,5,7,12,20],[6,5,7,12,19],[6,6,6,9,14],[9,5,8,9,20]]},
   {code:'CAT', key:'catalunya',    name:'Spanish GP',              circuit:'Catalunya',     setups:[[16,11,1,10,12],[15,11,0,5,3],[17,11,0,2,0],[15,11,0,7,6]]},
-  {code:'RBR', key:'spielberg',    name:'Austrian GP',             circuit:'Spielberg',     setups:[[9,8,8,11,20],[10,9,8,11,18]]},
+  {code:'RBR', key:'spielberg',    name:'Austrian GP',             circuit:'Spielberg',     setups:[[9,8,8,11,20],[10,9,8,11,18],[10,8,8,9,20],[9,8,8,10,20]]},
   {code:'SIL', key:'silverstone',  name:'British GP',              circuit:'Silverstone',   setups:[[11,5,0,10,2],[11,5,1,15,13],[12,5,0,9,4],[12,5,0,8,1]]},
   {code:'HUN', key:'hungaroring',  name:'Hungarian GP',            circuit:'Hungaroring',   setups:[[18,12,8,14,20],[20,12,7,5,8]]},
   {code:'SPA', key:'belgian',      name:'Belgian GP',              circuit:'Spa',           setups:[[4,1,5,14,9],[5,2,5,14,12],[5,2,4,11,3],[6,2,4,10,4]]},
@@ -333,7 +349,7 @@ const TRACKS=[
   {code:'MNZ', key:'monza',        name:'Italian GP',              circuit:'Monza',         setups:[[2,0,7,5,15],[3,0,7,1,10]]},
   {code:'BAK', key:'baku',         name:'Azerbaijan GP',           circuit:'Baku',          setups:[[4,3,7,6,19],[3,2,7,6,20]]},
   {code:'SIN', key:'singapore',    name:'Singapore GP',            circuit:'Marina Bay',    setups:[[13,13,0,1,18],[15,13,1,1,19]]},
-  {code:'USA', key:'austin',       name:'United States GP',        circuit:'Austin',        setups:[[17,8,8,16,10],[16,7,8,16,14]]},
+  {code:'USA', key:'austin',       name:'United States GP',        circuit:'Austin',        setups:[[17,8,8,16,10],[16,7,8,16,14],[17,8,8,16,10],[16,8,7,14,1]]},
   {code:'MEX', key:'mexico',       name:'Mexico City GP',          circuit:'Mexico City',   setups:[[13,8,7,15,6],[13,8,7,15,6]]},
   {code:'INT', key:'interlagos',   name:'Sao Paulo GP',            circuit:'Interlagos',    setups:[[15,8,7,11,9],[14,8,7,14,11]]},
   {code:'LAS', key:'lasvegas',     name:'Las Vegas GP',            circuit:'Las Vegas',     setups:[[0,3,8,8,14],[0,3,8,11,20]]},
@@ -505,7 +521,90 @@ function constraintsOf(car){
   return cons;
 }
 
-function rateOf(d){ for(let i=0;i<4;i++) if(d<=RATINGS[i].hi+EPS) return i; return 3; }
+// 只數不排序，給診斷用
+function countOnly(cons){ let n=0; forEachCandidate(cons,()=>{n++;}); return n; }
+function consOfRounds(rounds){
+  const cons=[[],[],[],[],[]];
+  for(const h of rounds){
+    const v=values(h.setup);
+    h.ratings.forEach((r,i)=>{ if(r!==null) cons[i].push({v:v[i],lo:RATINGS[r].lo,hi:RATINGS[r].hi}); });
+  }
+  return cons;
+}
+// 找出「拿掉哪一輪就不矛盾」，並回推那一輪實際可能跑的設置
+function diagnose(){
+  const H=C().history;
+  if(H.length<2) return null;
+  const suspects=[];
+  for(let i=0;i<H.length;i++){
+    const n=countOnly(consOfRounds(H.filter((_,j)=>j!==i)));
+    if(n>0) suspects.push({i,n});
+  }
+  if(!suspects.length) return {suspects:[],fixes:[]};
+  const s=suspects[suspects.length-1];              // 優先看最近的那一輪
+  return {suspects, target:s.i, fixes:repairRound(s.i)};
+}
+function repairRound(idx){
+  const H=C().history, rec=H[idx];
+  const cons=consOfRounds(H.filter((_,j)=>j!==idx));
+  const S=[]; forEachCandidate(cons,(a,b,c,d,e,v)=>{ if(S.length<600) S.push(v.slice()); });
+  if(!S.length) return [];
+  const base=rec.setup, out=[], seen=new Set();
+  const fits=s=>{
+    const sv=values(s);
+    for(let j=0;j<S.length;j++){
+      const c=S[j]; let good=true;
+      for(let k=0;k<5;k++){
+        const r=rec.ratings[k]; if(r===null) continue;
+        const d=Math.abs(sv[k]-c[k]);
+        if(d<RATINGS[r].lo-EPS||d>RATINGS[r].hi+EPS){ good=false; break; }
+      }
+      if(good) return true;
+    }
+    return false;
+  };
+  const add=s=>{
+    const key=s.join(","); if(seen.has(key)) return; seen.add(key);
+    if(fits(s)) out.push({setup:s.slice(),
+      moved:s.reduce((a,x,i)=>a+Math.abs(x-base[i]),0),
+      changed:s.reduce((a,x,i)=>a+(x!==base[i]?1:0),0)});
+  };
+  for(let p=0;p<5;p++) for(let x=0;x<=SLIDERS[p].max;x++){
+    if(x===base[p]) continue; const s=base.slice(); s[p]=x; add(s);
+  }
+  for(let p=0;p<5;p++) for(let q=p+1;q<5;q++)
+    for(let x=0;x<=SLIDERS[p].max;x++) for(let y=0;y<=SLIDERS[q].max;y++){
+      if(x===base[p]&&y===base[q]) continue;
+      const s=base.slice(); s[p]=x; s[q]=y; add(s);
+    }
+  out.sort((a,b)=>a.changed-b.changed || a.moved-b.moved);
+  return out.slice(0,5);
+}
+// 收斂到 1 組時：假設「某一輪的某一維評價差了一級」，會得到哪些替代解
+function alternatives(){
+  const res=C().result; if(!res||res.n!==1) return [];
+  const H=C().history, cur=res.best.join(","), found=new Map();
+  for(let r=0;r<H.length;r++){
+    for(let i=0;i<5;i++){
+      const k=H[r].ratings[i]; if(k===null) continue;
+      let idx=0; for(let q=0;q<r;q++) if(H[q].ratings[i]!==null) idx++;
+      const cons=consOfRounds(H);
+      const c0=cons[i][idx];
+      cons[i][idx]={v:c0.v, lo:RATINGS[Math.max(0,k-1)].lo, hi:RATINGS[Math.min(3,k+1)].hi};
+      let hits=0;
+      forEachCandidate(cons,(a,b,c,d,e)=>{
+        if(hits++>40) return;
+        const s=[a,b,c,d,e], key=s.join(",");
+        if(key===cur||found.has(key)) return;
+        found.set(key,{setup:s, round:r, dim:i, rating:k,
+          changed:s.reduce((x,y,j)=>x+(y!==res.best[j]?1:0),0),
+          moved:s.reduce((x,y,j)=>x+Math.abs(y-res.best[j]),0)});
+      });
+    }
+  }
+  return [...found.values()].sort((a,b)=>a.changed-b.changed||a.moved-b.moved).slice(0,4);
+}
+function rateOf(d){ for(let i=0;i<3;i++) if(d<=CUT[i]+EPS) return i; return 3; }
 // Sprint：B–E 鎖死，只能動 A。挑「預期剩餘解最少」的那格，而不是最靠近先驗的那格
 const SPRINT_CAP=30000;
 function sprintOptions(cons,base,n){
@@ -560,7 +659,7 @@ function buildStatic(){
       <div class="sl-foot"><span>${s.lo}</span><span class="mono" id="si${i}"></span><span>${s.hi}</span></div>
     </div>`).join("");
   SLIDERS.forEach((s,i)=>$("sr"+i).addEventListener("input",ev=>{
-    C().setup[i]=+ev.target.value; renderSliders(); renderDims();
+    C().setup[i]=+ev.target.value; renderSliders(); renderDims(); renderFbFor();
   }));
 
   $("dims").innerHTML=DIMS.map((d,i)=>`
@@ -772,7 +871,63 @@ function renderLog(){
   $("logHint").textContent = "履歷會跟著存檔和備份檔一起保存，用來補救忘記寫入的收斂結果。";
   $("clearLog").disabled = !log.length;
 }
-function render(){ renderLog(); renderSliders(); renderPending(); renderStatus(); renderDims(); renderWhy(); renderHistory(); renderTrack(); }
+function renderFbFor(){
+  const s=C().setup;
+  $("fbFor").innerHTML = `這輪回饋對應的設置：<b>${SLIDERS.map((sl,i)=>sl.k+" "+sl.fmt(s[i])).join("　")}</b>`
+    + `<span style="margin-left:auto">確認車上跑的就是這組再記錄</span>`;
+}
+function renderAlts(){
+  const el=$("diag"), res=C().result;
+  el.hidden=false;
+  el.innerHTML=`<div class="hd" style="color:var(--dim)">計算替代解…</div>`;
+  requestAnimationFrame(()=>{
+    const alts=alternatives();
+    if(!alts.length){
+      el.innerHTML=`<div style="color:var(--faint);font-size:12px">就算任何一輪的任何一維評價差了一級，答案也不會變 — 這組解相當穩固。</div>`;
+      return;
+    }
+    let html=`<div style="color:var(--dim);margin-bottom:8px">實測若不是 100%，代表某一輪有一維讀差了一級。屆時最可能的答案是：</div>`;
+    html+=alts.map(a=>{
+      const diff=SLIDERS.map((sl,i)=>a.setup[i]!==res.best[i]
+        ? sl.k+" "+sl.fmt(res.best[i])+" → "+sl.fmt(a.setup[i]) : null).filter(Boolean).join("，");
+      return `<div class="fix"><span class="s">${a.setup.map((x,i)=>SLIDERS[i].k+x).join(" ")}</span>
+        <span class="w">${diff}</span>
+        <span class="w">（若第 ${a.round+1} 輪的 ${DIMS[a.dim].name} 不是 ${RATINGS[a.rating].label}）</span>
+        <button data-alt="${a.setup.join(",")}">套用試試</button></div>`;
+    }).join("");
+    el.innerHTML=html;
+  });
+}
+function renderDiag(){
+  const el=$("diag"), res=C().result;
+  if(res&&res.n===1&&C().history.length){ renderAlts(); return; }
+  if(!res||res.n!==0){ el.hidden=true; el.innerHTML=""; return; }
+  el.hidden=false;
+  el.innerHTML=`<div class="hd">計算中…</div>`;
+  requestAnimationFrame(()=>{
+    const d=diagnose();
+    if(!d||!d.suspects.length){
+      el.innerHTML=`<div class="hd">這些回饋無法同時成立，而且拿掉任何單獨一輪都還是矛盾 — 可能有兩輪以上記錯了。建議清除本台車重來。</div>`;
+      return;
+    }
+    const rounds=d.suspects.map(s=>"第 "+(s.i+1)+" 輪").join("、");
+    let html=`<div class="hd">回饋互相矛盾。拿掉 ${rounds} 其中之一就能成立 — 最可能是 <b>第 ${d.target+1} 輪</b> 記錄的滑桿位置與車上實際跑的不一致。</div>`;
+    if(d.fixes.length){
+      html+=`<div style="color:var(--faint);font-size:12px;margin-bottom:4px">照那輪的評價回推，當時實際跑的比較可能是：</div>`;
+      html+=d.fixes.map(f=>{
+        const diff=SLIDERS.map((sl,i)=>f.setup[i]!==C().history[d.target].setup[i]
+          ? sl.k+" "+sl.fmt(C().history[d.target].setup[i])+" → "+sl.fmt(f.setup[i]) : null).filter(Boolean).join("，");
+        return `<div class="fix"><span class="s">${f.setup.map((x,i)=>SLIDERS[i].k+x).join(" ")}</span>
+          <span class="w">${diff}</span>
+          <button data-fixi="${d.target}" data-fix="${f.setup.join(",")}">改成這組</button></div>`;
+      }).join("");
+    }else{
+      html+=`<div style="color:var(--faint);font-size:12px">找不到只改一兩根滑桿就能成立的版本，建議直接刪掉第 ${d.target+1} 輪。</div>`;
+    }
+    el.innerHTML=html;
+  });
+}
+function render(){ renderLog(); renderFbFor(); renderDiag(); renderSliders(); renderPending(); renderStatus(); renderDims(); renderWhy(); renderHistory(); renderTrack(); }
 
 function recompute(){
   busy=true; renderStatus();
@@ -853,7 +1008,7 @@ $("record").addEventListener("click",()=>{
     busy=false; render();
     const w=$("fbWarn");
     if(res.n===0){
-      w.textContent="這筆回饋和之前的紀錄無法同時成立，多半是某一格點錯了。到下面把可疑的那筆刪掉。";
+      w.textContent="這筆回饋和之前的紀錄無法同時成立。下面的診斷會指出是哪一輪、以及當時實際可能跑的設置。";
       w.hidden=false;
     }else if(before===res.n&&before>1){
       w.textContent="可能解沒有減少：這組設置在五個維度上和先前等價。手動把滑桿拉開一點再跑一輪。";
@@ -864,7 +1019,7 @@ $("record").addEventListener("click",()=>{
 $("clearFb").addEventListener("click",()=>{ C().pending=[null,null,null,null,null]; renderPending(); $("fbWarn").hidden=true; });
 $("backToRec").addEventListener("click",()=>{
   const res=C().result; if(!res||res.n<1) return;
-  C().setup=recommended(); renderSliders(); renderDims();
+  C().setup=recommended(); renderSliders(); renderDims(); renderFbFor();
 });
 $("sprintMode").addEventListener("change",e=>{
   sprint=e.target.checked;
@@ -889,6 +1044,12 @@ $("logUnsaved").addEventListener("click",e=>{
   save(); renderCal(); renderTrack(); renderLog(); renderDims(); renderWhy();
 });
 $("clearLog").addEventListener("click",()=>{ log=[]; save(); renderLog(); });
+$("diag").addEventListener("click",e=>{
+  const f=e.target.closest("button[data-fix]");
+  if(f){ C().history[+f.dataset.fixi].setup=f.dataset.fix.split(",").map(Number); recompute(); return; }
+  const a=e.target.closest("button[data-alt]");
+  if(a){ C().setup=a.dataset.alt.split(",").map(Number); renderSliders(); renderDims(); renderFbFor(); }
+});
 $("delPrior").addEventListener("click",()=>{
   const t=T(); if(!t.setups.length) return;
   t.setups.pop(); save(); renderCal(); renderTrack(); renderDims(); renderWhy(); seedFromPrior(); recompute();
