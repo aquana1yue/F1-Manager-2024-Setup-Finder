@@ -264,7 +264,7 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
       <div class="legend">
         <span><i style="background:var(--band)"></i>可能解分布</span>
         <span><i style="background:var(--cur)"></i>本輪設置</span>
-        <span><i style="background:var(--mu)"></i>賽道先驗 μ ± 0.038</span>
+        <span><i style="background:var(--mu)"></i>賽道先驗 μ ± 0.041</span>
       </div>
     </section>
 
@@ -347,8 +347,8 @@ const RATINGS=[
 ];
 // 需要「唯一分級」時（Sprint 選點、回推修正）用的點值切分
 const CUT=[OPT, (GG_LO+GG_HI)/2, 0.10];
-// 浮動半寬：24 條賽道、27 組配對差，平均 |Δ| 0.0251 → h ≈ 1.5×（分布比均勻更集中於 0）
-const PRIOR_H=0.038;
+// 浮動半寬：24 條賽道、39 組配對差，平均 |Δ| 0.0274 → h ≈ 1.5×（分布比均勻更集中於 0）
+const PRIOR_H=0.041;
 const CENTER=[10,7,4,8,10];
 
 // 賽道母表。setups 是各賽道歷史最終設置（滑桿 index）。
@@ -357,7 +357,7 @@ const TRACKS=[
   {code:'JED', key:'saudi',        name:'Saudi Arabian GP',        circuit:'Jeddah',        setups:[[13,5,0,16,0],[16,4,1,16,0],[13,5,0,16,0],[16,4,1,16,0]]},
   {code:'AUS', key:'australian',   name:'Australian GP',           circuit:'Albert Park',   setups:[[17,8,2,8,13],[16,8,2,7,8]]},
   {code:'SUZ', key:'suzuka',       name:'Japanese GP',             circuit:'Suzuka',        setups:[[14,7,5,16,0],[15,7,5,16,0]]},
-  {code:'SHA', key:'chinese',      name:'Chinese GP',              circuit:'Shanghai',      setups:[[4,5,7,5,18],[8,4,8,0,19]]},
+  {code:'SHA', key:'chinese',      name:'Chinese GP',              circuit:'Shanghai',      setups:[[4,5,7,5,18],[8,4,8,0,19],[4,5,6,0,8],[4,6,5,0,6]]},
   {code:'MIA', key:'miami',        name:'Miami GP',                circuit:'Miami',         setups:[[15,8,7,15,8],[16,8,8,16,10]]},
   {code:'IMO', key:'imola',        name:'Emilia Romagna GP',       circuit:'Imola',         setups:[[14,7,6,15,1],[12,8,3,16,0],[13,7,5,16,1],[12,8,3,15,0]]},
   {code:'MON', key:'monaco',       name:'Monaco GP',               circuit:'Monte Carlo',   setups:[[20,14,2,16,20],[20,14,1,12,13],[20,14,2,16,20],[20,14,0,9,5]]},
@@ -365,17 +365,17 @@ const TRACKS=[
   {code:'CAT', key:'catalunya',    name:'Spanish GP',              circuit:'Catalunya',     setups:[[16,11,1,10,12],[15,11,0,5,3],[17,11,0,2,0],[15,11,0,7,6]]},
   {code:'RBR', key:'spielberg',    name:'Austrian GP',             circuit:'Spielberg',     setups:[[9,8,8,11,20],[10,9,8,11,18],[10,8,8,9,20],[9,8,8,10,20]]},
   {code:'SIL', key:'silverstone',  name:'British GP',              circuit:'Silverstone',   setups:[[11,5,0,10,2],[11,5,1,15,13],[12,5,0,9,4],[12,5,0,8,1]]},
-  {code:'HUN', key:'hungaroring',  name:'Hungarian GP',            circuit:'Hungaroring',   setups:[[18,12,8,14,20],[20,12,7,5,8]]},
+  {code:'HUN', key:'hungaroring',  name:'Hungarian GP',            circuit:'Hungaroring',   setups:[[18,12,8,14,20],[20,12,7,5,8],[18,12,7,11,17],[18,11,8,11,20]]},
   {code:'SPA', key:'belgian',      name:'Belgian GP',              circuit:'Spa',           setups:[[4,1,5,14,9],[5,2,5,14,12],[5,2,4,11,3],[6,2,4,10,4]]},
   {code:'ZAN', key:'zandvoort',    name:'Dutch GP',                circuit:'Zandvoort',     setups:[[19,9,4,14,20],[19,9,3,11,18]]},
-  {code:'MNZ', key:'monza',        name:'Italian GP',              circuit:'Monza',         setups:[[2,0,7,5,15],[3,0,7,1,10]]},
-  {code:'BAK', key:'baku',         name:'Azerbaijan GP',           circuit:'Baku',          setups:[[4,3,7,6,19],[3,2,7,6,20]]},
-  {code:'SIN', key:'singapore',    name:'Singapore GP',            circuit:'Marina Bay',    setups:[[13,13,0,1,18],[15,13,1,1,19]]},
+  {code:'MNZ', key:'monza',        name:'Italian GP',              circuit:'Monza',         setups:[[2,0,7,5,15],[3,0,7,1,10],[1,0,7,5,13],[4,0,8,5,18]]},
+  {code:'BAK', key:'baku',         name:'Azerbaijan GP',           circuit:'Baku',          setups:[[4,3,7,6,19],[3,2,7,6,20],[4,3,6,3,14],[4,2,7,5,20]]},
+  {code:'SIN', key:'singapore',    name:'Singapore GP',            circuit:'Marina Bay',    setups:[[13,13,0,1,18],[15,13,1,1,19],[17,12,4,7,20],[13,13,0,0,15]]},
   {code:'USA', key:'austin',       name:'United States GP',        circuit:'Austin',        setups:[[17,8,8,16,10],[16,7,8,16,14],[17,8,8,16,10],[16,8,7,14,1]]},
   {code:'MEX', key:'mexico',       name:'Mexico City GP',          circuit:'Mexico City',   setups:[[13,8,7,15,6],[13,8,7,15,6]]},
   {code:'INT', key:'interlagos',   name:'Sao Paulo GP',            circuit:'Interlagos',    setups:[[15,8,7,11,9],[14,8,7,14,11]]},
   {code:'LAS', key:'lasvegas',     name:'Las Vegas GP',            circuit:'Las Vegas',     setups:[[0,3,8,8,14],[0,3,8,11,20]]},
-  {code:'QAT', key:'losail',       name:'Qatar GP',                circuit:'Lusail',        setups:[[15,8,1,10,9],[16,8,2,14,18]]},
+  {code:'QAT', key:'losail',       name:'Qatar GP',                circuit:'Lusail',        setups:[[15,8,1,10,9],[16,8,2,14,18],[16,8,2,13,16],[16,8,1,9,11]]},
   {code:'YAS', key:'abudhabi',     name:'Abu Dhabi GP',            circuit:'Yas Marina',    setups:[[10,8,4,7,9],[10,7,6,12,20]]},
 ];
 const SEASON_ORDER=['bahrain','miami','australian','montreal','saudi','belgian','imola','silverstone','monaco','catalunya','austin','spielberg','hungaroring','baku','chinese','monza','losail','singapore','zandvoort','mexico','interlagos','lasvegas','suzuka','abudhabi'];
