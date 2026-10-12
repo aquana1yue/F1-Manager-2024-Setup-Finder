@@ -264,7 +264,7 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
       <div class="legend">
         <span><i style="background:var(--band)"></i>可能解分布</span>
         <span><i style="background:var(--cur)"></i>本輪設置</span>
-        <span><i style="background:var(--mu)"></i>賽道先驗 μ ± 0.041</span>
+        <span><i style="background:var(--mu)"></i>賽道先驗 μ ± 0.044</span>
       </div>
     </section>
 
@@ -339,9 +339,9 @@ const OPT=39/5600, EPS=1e-9, BINS=400, MERGE_GAP=0.02;
 // Great/Good 的分界由 9 場已確認資料推得，落在 (459/11200, 462/11200]。
 // 真值未知，因此兩側都取到不確定區間的端點 — 寧可多留候選，也不誤刪真解。
 // 兩個上層分界由 26 場已驗證資料推得，真值未知，兩側都取到不確定區間的端點。
-// 三個分界都由已驗證場次反推，真值未知，兩側都取到不確定區間的端點。
-const OG_LO=78/11200,   OG_HI=80/11200;     // Optimal/Great (0.006964, 0.007143]
-const GG_LO=459/11200,  GG_HI=462/11200;    // Great/Good    (0.040982, 0.041250]
+// 三個分界由 71 場已驗證紀錄反推，真值未知，兩側都取到不確定區間的端點。
+const OG_LO=78/11200,   OG_HI=81/11200;     // Optimal/Great (0.006964, 0.007232]
+const GG_LO=459/11200,  GG_HI=460/11200;    // Great/Good    (0.040982, 0.041071]
 const GB_LO=1127/11200, GB_HI=1145/11200;   // Good/Bad      (0.100625, 0.102232]
 const RATINGS=[
   {label:"Optimal",lo:0,     hi:OG_HI},
@@ -352,35 +352,35 @@ const RATINGS=[
 // 需要「唯一分級」時（Sprint 選點、回推修正）用的點值切分
 const CUT=[(OG_LO+OG_HI)/2, (GG_LO+GG_HI)/2, (GB_LO+GB_HI)/2];
 // 浮動半寬：24 條賽道、59 組配對差，平均 |Δ| 0.0266 → h ≈ 1.5×（分布比均勻更集中於 0）
-const PRIOR_H=0.040;
+const PRIOR_H=0.044;
 const CENTER=[10,7,4,8,10];
 
 // 賽道母表。setups 是各賽道歷史最終設置（滑桿 index）。
 const TRACKS=[
-  {code:'BHR', key:'bahrain',      name:'Bahrain GP',              circuit:'Sakhir',        setups:[[10,5,3,11,6],[9,5,3,13,8],[10,5,3,11,6],[8,4,3,13,7]]},
-  {code:'JED', key:'saudi',        name:'Saudi Arabian GP',        circuit:'Jeddah',        setups:[[13,5,0,16,0],[16,4,1,16,0],[13,5,0,16,0],[16,4,1,16,0],[14,4,0,16,0],[14,4,0,16,0]]},
-  {code:'AUS', key:'australian',   name:'Australian GP',           circuit:'Albert Park',   setups:[[17,8,2,8,13],[16,8,2,7,8],[16,8,3,13,19],[16,8,2,7,8]]},
-  {code:'SUZ', key:'suzuka',       name:'Japanese GP',             circuit:'Suzuka',        setups:[[14,7,5,16,0],[15,7,5,16,0],[15,9,3,13,0],[15,9,3,13,0],[14,8,4,16,0],[14,9,3,16,0]]},
-  {code:'SHA', key:'chinese',      name:'Chinese GP',              circuit:'Shanghai',      setups:[[4,5,7,5,18],[8,4,8,0,19],[4,5,6,0,8],[4,6,5,0,6],[2,6,5,0,5],[4,5,6,1,11]]},
-  {code:'MIA', key:'miami',        name:'Miami GP',                circuit:'Miami',         setups:[[15,8,7,15,8],[16,8,8,16,10],[14,9,5,14,0],[13,9,5,15,0]]},
-  {code:'IMO', key:'imola',        name:'Emilia Romagna GP',       circuit:'Imola',         setups:[[14,7,6,15,1],[12,8,3,16,0],[13,7,5,16,1],[12,8,3,15,0],[13,8,4,16,0],[13,8,4,16,0]]},
-  {code:'MON', key:'monaco',       name:'Monaco GP',               circuit:'Monte Carlo',   setups:[[20,14,2,16,20],[20,14,1,12,13],[20,14,2,16,20],[20,14,0,9,5],[20,14,1,15,20],[20,14,0,8,5]]},
-  {code:'MTL', key:'montreal',     name:'Canadian GP',             circuit:'Montreal',      setups:[[6,5,7,12,20],[6,5,7,12,19],[6,6,6,9,14],[9,5,8,9,20],[5,6,5,7,9],[6,6,6,9,13]]},
-  {code:'CAT', key:'catalunya',    name:'Spanish GP',              circuit:'Catalunya',     setups:[[16,11,1,10,12],[15,11,0,5,3],[17,11,0,2,0],[15,11,0,7,6]]},
-  {code:'RBR', key:'spielberg',    name:'Austrian GP',             circuit:'Spielberg',     setups:[[9,8,8,11,20],[10,9,8,11,18],[10,8,8,9,20],[9,8,8,10,20],[10,8,8,10,16],[10,9,7,4,1]]},
-  {code:'SIL', key:'silverstone',  name:'British GP',              circuit:'Silverstone',   setups:[[11,5,0,10,2],[11,5,1,15,13],[12,5,0,9,4],[12,5,0,8,1],[11,5,0,13,11],[12,5,0,10,6]]},
-  {code:'HUN', key:'hungaroring',  name:'Hungarian GP',            circuit:'Hungaroring',   setups:[[18,12,8,14,20],[20,12,7,5,8],[18,12,7,11,17],[18,11,8,11,20],[20,12,6,2,3],[19,12,7,6,7]]},
-  {code:'SPA', key:'belgian',      name:'Belgian GP',              circuit:'Spa',           setups:[[4,1,5,14,9],[5,2,5,14,12],[5,2,4,11,3],[6,2,4,10,4],[6,2,4,10,5],[5,1,5,15,13]]},
-  {code:'ZAN', key:'zandvoort',    name:'Dutch GP',                circuit:'Zandvoort',     setups:[[19,9,4,14,20],[19,9,3,11,18],[19,10,1,3,2],[19,9,2,7,11]]},
-  {code:'MNZ', key:'monza',        name:'Italian GP',              circuit:'Monza',         setups:[[2,0,7,5,15],[3,0,7,1,10],[1,0,7,5,13],[4,0,8,5,18]]},
-  {code:'BAK', key:'baku',         name:'Azerbaijan GP',           circuit:'Baku',          setups:[[4,3,7,6,19],[3,2,7,6,20],[4,3,6,3,14],[4,2,7,5,20],[3,2,7,7,20],[3,2,7,7,20]]},
-  {code:'SIN', key:'singapore',    name:'Singapore GP',            circuit:'Marina Bay',    setups:[[13,13,0,1,18],[15,13,1,1,19],[17,12,4,7,20],[13,13,0,0,15]]},
-  {code:'USA', key:'austin',       name:'United States GP',        circuit:'Austin',        setups:[[17,8,8,16,10],[16,7,8,16,14],[17,8,8,16,10],[16,8,7,14,1]]},
-  {code:'MEX', key:'mexico',       name:'Mexico City GP',          circuit:'Mexico City',   setups:[[13,8,7,15,6],[13,8,7,15,6],[12,9,6,15,0]]},
-  {code:'INT', key:'interlagos',   name:'Sao Paulo GP',            circuit:'Interlagos',    setups:[[15,8,7,11,9],[14,8,7,14,11],[15,7,8,16,16],[12,7,7,15,11]]},
-  {code:'LAS', key:'lasvegas',     name:'Las Vegas GP',            circuit:'Las Vegas',     setups:[[0,3,8,8,14],[0,3,8,11,20],[0,4,7,2,2],[1,2,8,6,16],[0,4,7,2,1],[0,3,8,7,11]]},
-  {code:'QAT', key:'losail',       name:'Qatar GP',                circuit:'Lusail',        setups:[[15,8,1,10,9],[16,8,2,14,18],[16,8,2,13,16],[16,8,1,9,11]]},
-  {code:'YAS', key:'abudhabi',     name:'Abu Dhabi GP',            circuit:'Yas Marina',    setups:[[10,8,4,7,9],[10,7,6,12,20],[11,7,7,13,20],[9,8,3,6,5]]},
+  {code:'BHR', key:'bahrain',      name:'Bahrain GP',              circuit:'Sakhir',        setups:[[10,5,3,11,6],[9,5,3,13,8],[10,5,3,11,6],[8,4,3,13,7],[9,4,4,16,15],[10,5,3,10,3]]},
+  {code:'JED', key:'saudi',        name:'Saudi Arabian GP',        circuit:'Jeddah',        setups:[[13,5,0,16,0],[16,4,1,16,0],[13,5,0,16,0],[16,4,1,16,0],[14,4,0,16,0],[14,4,0,16,0],[15,4,1,16,0],[13,5,0,16,0]]},
+  {code:'AUS', key:'australian',   name:'Australian GP',           circuit:'Albert Park',   setups:[[17,8,2,8,13],[16,8,2,7,8],[16,8,3,13,19],[16,8,2,7,8],[15,8,1,5,4],[16,8,1,3,2]]},
+  {code:'SUZ', key:'suzuka',       name:'Japanese GP',             circuit:'Suzuka',        setups:[[14,7,5,16,0],[15,7,5,16,0],[15,9,3,13,0],[15,9,3,13,0],[14,8,4,16,0],[14,9,3,16,0],[14,8,4,15,0],[17,7,6,16,1]]},
+  {code:'SHA', key:'chinese',      name:'Chinese GP',              circuit:'Shanghai',      setups:[[4,5,7,5,18],[8,4,8,0,19],[4,5,6,0,8],[4,6,5,0,6],[2,6,5,0,5],[4,5,6,1,11],[8,4,8,0,20],[5,5,7,3,16]]},
+  {code:'MIA', key:'miami',        name:'Miami GP',                circuit:'Miami',         setups:[[15,8,7,15,8],[16,8,8,16,10],[14,9,5,14,0],[13,9,5,15,0],[13,9,5,15,0],[14,9,6,16,4]]},
+  {code:'IMO', key:'imola',        name:'Emilia Romagna GP',       circuit:'Imola',         setups:[[14,7,6,15,1],[12,8,3,16,0],[13,7,5,16,1],[12,8,3,15,0],[13,8,4,16,0],[13,8,4,16,0],[14,8,5,16,0],[16,7,5,14,0]]},
+  {code:'MON', key:'monaco',       name:'Monaco GP',               circuit:'Monte Carlo',   setups:[[20,14,2,16,20],[20,14,1,12,13],[20,14,2,16,20],[20,14,0,9,5],[20,14,1,15,20],[20,14,0,8,5],[20,14,2,16,20],[20,14,1,14,16]]},
+  {code:'MTL', key:'montreal',     name:'Canadian GP',             circuit:'Montreal',      setups:[[6,5,7,12,20],[6,5,7,12,19],[6,6,6,9,14],[9,5,8,9,20],[5,6,5,7,9],[6,6,6,9,13],[8,6,7,9,14],[9,5,8,9,20]]},
+  {code:'CAT', key:'catalunya',    name:'Spanish GP',              circuit:'Catalunya',     setups:[[16,11,1,10,12],[15,11,0,5,3],[17,11,0,2,0],[15,11,0,7,6],[18,11,1,8,12],[17,10,3,16,20]]},
+  {code:'RBR', key:'spielberg',    name:'Austrian GP',             circuit:'Spielberg',     setups:[[9,8,8,11,20],[10,9,8,11,18],[10,8,8,9,20],[9,8,8,10,20],[10,8,8,10,16],[10,9,7,4,1],[8,8,8,12,16],[10,9,8,11,19]]},
+  {code:'SIL', key:'silverstone',  name:'British GP',              circuit:'Silverstone',   setups:[[11,5,0,10,2],[11,5,1,15,13],[12,5,0,9,4],[12,5,0,8,1],[11,5,0,13,11],[12,5,0,10,6],[12,5,0,8,0],[12,5,0,8,0]]},
+  {code:'HUN', key:'hungaroring',  name:'Hungarian GP',            circuit:'Hungaroring',   setups:[[18,12,8,14,20],[20,12,7,5,8],[18,12,7,11,17],[18,11,8,11,20],[20,12,6,2,3],[19,12,7,6,7],[19,12,6,3,4],[18,12,8,14,20]]},
+  {code:'SPA', key:'belgian',      name:'Belgian GP',              circuit:'Spa',           setups:[[4,1,5,14,9],[5,2,5,14,12],[5,2,4,11,3],[6,2,4,10,4],[6,2,4,10,5],[5,1,5,15,13],[6,1,6,16,17],[5,1,5,15,15]]},
+  {code:'ZAN', key:'zandvoort',    name:'Dutch GP',                circuit:'Zandvoort',     setups:[[19,9,4,14,20],[19,9,3,11,18],[19,10,1,3,2],[19,9,2,7,11],[19,9,2,6,9],[20,9,4,11,20]]},
+  {code:'MNZ', key:'monza',        name:'Italian GP',              circuit:'Monza',         setups:[[2,0,7,5,15],[3,0,7,1,10],[1,0,7,5,13],[4,0,8,5,18],[5,0,8,4,18],[2,0,7,4,13]]},
+  {code:'BAK', key:'baku',         name:'Azerbaijan GP',           circuit:'Baku',          setups:[[4,3,7,6,19],[3,2,7,6,20],[4,3,6,3,14],[4,2,7,5,20],[3,2,7,7,20],[3,2,7,7,20],[3,2,7,6,20],[4,3,6,3,14]]},
+  {code:'SIN', key:'singapore',    name:'Singapore GP',            circuit:'Marina Bay',    setups:[[13,13,0,1,18],[15,13,1,1,19],[17,12,4,7,20],[13,13,0,0,15],[14,13,0,0,17],[16,12,3,5,20]]},
+  {code:'USA', key:'austin',       name:'United States GP',        circuit:'Austin',        setups:[[17,8,8,16,10],[16,7,8,16,14],[17,8,8,16,10],[16,8,7,14,1],[17,8,7,13,3],[16,8,7,15,3]]},
+  {code:'MEX', key:'mexico',       name:'Mexico City GP',          circuit:'Mexico City',   setups:[[13,8,7,15,6],[13,8,7,15,6],[12,9,6,15,0],[14,7,8,15,13],[12,9,6,15,1]]},
+  {code:'INT', key:'interlagos',   name:'Sao Paulo GP',            circuit:'Interlagos',    setups:[[15,8,7,11,9],[14,8,7,14,11],[15,7,8,16,16],[12,7,7,15,11],[12,8,5,9,1],[14,7,8,14,13]]},
+  {code:'LAS', key:'lasvegas',     name:'Las Vegas GP',            circuit:'Las Vegas',     setups:[[0,3,8,8,14],[0,3,8,11,20],[0,4,7,2,2],[1,2,8,6,16],[0,4,7,2,1],[0,3,8,7,11],[2,3,8,4,11],[2,3,8,8,19]]},
+  {code:'QAT', key:'losail',       name:'Qatar GP',                circuit:'Lusail',        setups:[[15,8,1,10,9],[16,8,2,14,18],[16,8,2,13,16],[16,8,1,9,11],[18,8,3,15,20],[16,8,1,8,9]]},
+  {code:'YAS', key:'abudhabi',     name:'Abu Dhabi GP',            circuit:'Yas Marina',    setups:[[10,8,4,7,9],[10,7,6,12,20],[11,7,7,13,20],[9,8,3,6,5],[9,7,6,15,20],[8,8,3,6,5]]},
 ];
 const SEASON_ORDER=['bahrain','saudi','australian','suzuka','chinese','miami','imola','monaco','montreal','catalunya','spielberg','silverstone','hungaroring','belgian','zandvoort','monza','baku','singapore','austin','mexico','interlagos','lasvegas','losail','abudhabi'];  // 2024 原始賽曆
 const DEFAULT_ORDER=TRACKS.map(t=>t.key);   // 2024 原始賽曆
@@ -557,78 +557,79 @@ function consOfRounds(rounds){
   }
   return cons;
 }
-// 找出「拿掉哪一輪就不矛盾」，並回推那一輪實際可能跑的設置
+// 最後一輪是你當下看得到、可以立刻對照遊戲畫面的那一輪，視為可信標的，
+// 只在它之前的輪次裡找「滑桿與建議不一致」或「回饋點錯」這兩種人為錯誤。
 function diagnose(){
   const H=C().history;
   if(H.length<2) return null;
+  const last=H.length-1;
+  const fallback=solve(consOfRounds([H[last]]),MU());   // 只採信最後一輪 + 先驗
   const suspects=[];
-  for(let i=0;i<H.length;i++){
+  for(let i=0;i<last;i++){
     const n=countOnly(consOfRounds(H.filter((_,j)=>j!==i)));
-    if(n>0) suspects.push({i,n});
+    if(n>0) suspects.push({i,n,fixes:repairRound(i)});
   }
-  if(!suspects.length) return {suspects:[],fixes:[]};
-  const s=suspects[suspects.length-1];              // 優先看最近的那一輪
-  return {suspects, target:s.i, fixes:repairRound(s.i)};
+  if(!suspects.length) return {suspects:[],fixes:[],target:-1,fallback};
+  suspects.sort((a,b)=>{
+    const ca=a.fixes.length?a.fixes[0].cost:99, cb=b.fixes.length?b.fixes[0].cost:99;
+    return ca-cb || a.i-b.i;
+  });
+  return {suspects, target:suspects[0].i, fixes:suspects[0].fixes, fallback};
 }
 function repairRound(idx){
   const H=C().history, rec=H[idx];
   const cons=consOfRounds(H.filter((_,j)=>j!==idx));
-  const S=[]; forEachCandidate(cons,(a,b,c,d,e,v)=>{ if(S.length<600) S.push(v.slice()); });
+  const S=[]; forEachCandidate(cons,(a,b,c,d,e,v)=>{ if(S.length<800) S.push(v.slice()); });
   if(!S.length) return [];
-  const base=rec.setup, out=[], seen=new Set();
-  const fits=s=>{
-    const sv=values(s);
+  const fitsWith=(setup,ratings)=>{
+    const sv=values(setup);
     for(let j=0;j<S.length;j++){
-      const c=S[j]; let good=true;
+      const c=S[j]; let ok=true;
       for(let k=0;k<5;k++){
-        const r=rec.ratings[k]; if(r===null) continue;
+        const r=ratings[k]; if(r===null) continue;
         const d=Math.abs(sv[k]-c[k]);
-        if(d<RATINGS[r].lo-EPS||d>RATINGS[r].hi+EPS){ good=false; break; }
+        if(d<RATINGS[r].lo-EPS||d>RATINGS[r].hi+EPS){ ok=false; break; }
       }
-      if(good) return true;
+      if(ok) return true;
     }
     return false;
   };
-  const add=s=>{
-    const key=s.join(","); if(seen.has(key)) return; seen.add(key);
-    if(fits(s)) out.push({setup:s.slice(),
-      moved:s.reduce((a,x,i)=>a+Math.abs(x-base[i]),0),
-      changed:s.reduce((a,x,i)=>a+(x!==base[i]?1:0),0)});
-  };
+  const out=[], seen=new Set();
+  // (1) 輸入車手回報時點錯一格
+  for(let i=0;i<5;i++){
+    const cur=rec.ratings[i]; if(cur===null) continue;
+    for(const nr of [cur-1,cur+1,cur-2,cur+2]){
+      if(nr<0||nr>3) continue;
+      const key="r"+i+":"+nr; if(seen.has(key)) continue; seen.add(key);
+      const rr=rec.ratings.slice(); rr[i]=nr;
+      if(fitsWith(rec.setup,rr))
+        out.push({type:"rating",dim:i,from:cur,to:nr,cost:Math.abs(nr-cur)===1?1:3,
+                  setup:rec.setup.slice(),ratings:rr});
+    }
+  }
+  // (2) 遊戲裡調整的滑桿與建議不一致
   for(let p=0;p<5;p++) for(let x=0;x<=SLIDERS[p].max;x++){
-    if(x===base[p]) continue; const s=base.slice(); s[p]=x; add(s);
+    if(x===rec.setup[p]) continue;
+    const key="s"+p+":"+x; if(seen.has(key)) continue; seen.add(key);
+    const s=rec.setup.slice(); s[p]=x;
+    if(fitsWith(s,rec.ratings))
+      out.push({type:"slider",slider:p,from:rec.setup[p],to:x,cost:Math.abs(x-rec.setup[p]),
+                setup:s,ratings:rec.ratings.slice()});
   }
-  for(let p=0;p<5;p++) for(let q=p+1;q<5;q++)
-    for(let x=0;x<=SLIDERS[p].max;x++) for(let y=0;y<=SLIDERS[q].max;y++){
-      if(x===base[p]&&y===base[q]) continue;
-      const s=base.slice(); s[p]=x; s[q]=y; add(s);
-    }
-  out.sort((a,b)=>a.changed-b.changed || a.moved-b.moved);
-  return out.slice(0,5);
-}
-// 收斂到 1 組時：假設「某一輪的某一維評價差了一級」，會得到哪些替代解
-function alternatives(){
-  const res=C().result; if(!res||res.n!==1) return [];
-  const H=C().history, cur=res.best.join(","), found=new Map();
-  for(let r=0;r<H.length;r++){
-    for(let i=0;i<5;i++){
-      const k=H[r].ratings[i]; if(k===null) continue;
-      let idx=0; for(let q=0;q<r;q++) if(H[q].ratings[i]!==null) idx++;
-      const cons=consOfRounds(H);
-      const c0=cons[i][idx];
-      cons[i][idx]={v:c0.v, lo:RATINGS[Math.max(0,k-1)].lo, hi:RATINGS[Math.min(3,k+1)].hi};
-      let hits=0;
-      forEachCandidate(cons,(a,b,c,d,e)=>{
-        if(hits++>40) return;
-        const s=[a,b,c,d,e], key=s.join(",");
-        if(key===cur||found.has(key)) return;
-        found.set(key,{setup:s, round:r, dim:i, rating:k,
-          changed:s.reduce((x,y,j)=>x+(y!==res.best[j]?1:0),0),
-          moved:s.reduce((x,y,j)=>x+Math.abs(y-res.best[j]),0)});
-      });
-    }
+  // (3) 單一修正都不行時，才試兩根滑桿
+  if(!out.length){
+    for(let p=0;p<5;p++) for(let q=p+1;q<5;q++)
+      for(let x=0;x<=SLIDERS[p].max;x++) for(let y=0;y<=SLIDERS[q].max;y++){
+        if(x===rec.setup[p]&&y===rec.setup[q]) continue;
+        const s=rec.setup.slice(); s[p]=x; s[q]=y;
+        const key=s.join(","); if(seen.has(key)) continue; seen.add(key);
+        if(fitsWith(s,rec.ratings))
+          out.push({type:"slider2",cost:10+Math.abs(x-rec.setup[p])+Math.abs(y-rec.setup[q]),
+                    setup:s,ratings:rec.ratings.slice()});
+      }
   }
-  return [...found.values()].sort((a,b)=>a.changed-b.changed||a.moved-b.moved).slice(0,4);
+  out.sort((a,b)=>a.cost-b.cost);
+  return out.slice(0,6);
 }
 function rateOf(d){ for(let i=0;i<3;i++) if(d<=CUT[i]+EPS) return i; return 3; }
 // Sprint：B–E 鎖死，只能動 A。挑「預期剩餘解最少」的那格，而不是最靠近先驗的那格
@@ -801,7 +802,12 @@ function renderDims(){
 function renderWhy(){
   const res=C().result, mu=MU();
   if(!res||res.n===0){ $("recWhy").textContent=""; return; }
-  if(res.n===1){ $("recWhy").innerHTML="只剩一組解，上面就是本場的最終設置。"; return; }
+  if(res.n===1){
+    $("recWhy").innerHTML = sprintReleased
+      ? `已收斂到唯一解 — <em>Sprint 限制自動解除</em>，上面是五根滑桿的完整 100% 設置，正賽 Q1 前直接套用。`
+      : "只剩一組解，上面就是本場的最終設置。";
+    return;
+  }
   if(sprint&&res.sprint&&res.sprint.length){
     const o=res.sprint, best=o[0], worst=o[o.length-1];
     const chips=o.slice(0,5).map((x,i)=>
@@ -931,26 +937,36 @@ function renderDiag(){
   el.hidden=false;
   el.innerHTML=`<div class="hd">計算中…</div>`;
   requestAnimationFrame(()=>{
-    const d=diagnose();
+    const d=diagnose(), H=C().history, last=H.length-1;
+    const fb=d&&d.fallback;
+    const fbHtml = fb&&fb.n>0
+      ? `<div class="fix" style="border-top:1px solid var(--line-soft);margin-top:10px;padding-top:10px">
+           <span class="w">只採信最後一輪 ＋ 賽道先驗 →</span>
+           <span class="s">${fb.best.map((x,i)=>SLIDERS[i].k+x).join(" ")}</span>
+           <span class="w">剩 ${fb.n} 組</span>
+           <button data-keeplast="1">只留最後一輪</button>
+         </div>`
+      : "";
     if(!d||!d.suspects.length){
-      el.innerHTML=`<div class="hd">這些回饋無法同時成立，而且拿掉任何單獨一輪都還是矛盾 — 可能有兩輪以上記錯了。建議清除本台車重來。</div>`;
+      el.innerHTML=`<div class="hd">最後一輪（第 ${last+1} 輪）視為可信，但拿掉它之前的任何單獨一輪都仍然矛盾 — 可能有兩輪以上出錯。</div>`+fbHtml;
       return;
     }
-    const rounds=d.suspects.map(s=>"第 "+(s.i+1)+" 輪").join("、");
-    let html=`<div class="hd">回饋互相矛盾。拿掉 ${rounds} 其中之一就能成立 — 最可能是 <b>第 ${d.target+1} 輪</b> 記錄的滑桿位置與車上實際跑的不一致。</div>`;
-    if(d.fixes.length){
-      html+=`<div style="color:var(--faint);font-size:12px;margin-bottom:4px">照那輪的評價回推，當時實際跑的比較可能是：</div>`;
-      html+=d.fixes.map(f=>{
-        const diff=SLIDERS.map((sl,i)=>f.setup[i]!==C().history[d.target].setup[i]
-          ? sl.k+" "+sl.fmt(C().history[d.target].setup[i])+" → "+sl.fmt(f.setup[i]) : null).filter(Boolean).join("，");
-        return `<div class="fix"><span class="s">${f.setup.map((x,i)=>SLIDERS[i].k+x).join(" ")}</span>
-          <span class="w">${diff}</span>
-          <button data-fixi="${d.target}" data-fix="${f.setup.join(",")}">改成這組</button></div>`;
-      }).join("");
-    }else{
-      html+=`<div style="color:var(--faint);font-size:12px">找不到只改一兩根滑桿就能成立的版本，建議直接刪掉第 ${d.target+1} 輪。</div>`;
-    }
-    el.innerHTML=html;
+    const names=d.suspects.map(s=>"第 "+(s.i+1)+" 輪").join("、");
+    let html=`<div class="hd">回饋互相矛盾。最後一輪（第 ${last+1} 輪）是你當下可以對照遊戲畫面驗證的，視為可信；問題出在 ${names} 其中之一，最可能是 <b>第 ${d.target+1} 輪</b>。</div>`;
+    html+=`<div style="color:var(--faint);font-size:12px;margin-bottom:4px">那一輪可能的實際情況：</div>`;
+    html+=d.fixes.map(f=>{
+      let desc;
+      if(f.type==="rating")
+        desc=`回報點錯：${DIMS[f.dim].name} ${RATINGS[f.from].label} → ${RATINGS[f.to].label}`;
+      else if(f.type==="slider")
+        desc=`滑桿不一致：${SLIDERS[f.slider].k} ${SLIDERS[f.slider].fmt(f.from)} → ${SLIDERS[f.slider].fmt(f.to)}`;
+      else
+        desc=`兩根滑桿不一致`;
+      return `<div class="fix"><span class="s">${f.setup.map((x,i)=>SLIDERS[i].k+x).join(" ")}</span>
+        <span class="w">${desc}</span>
+        <button data-fixi="${d.target}" data-fix="${f.setup.join(",")}" data-fixr="${f.ratings.join(",")}">改成這樣</button></div>`;
+    }).join("");
+    el.innerHTML=html+fbHtml;
   });
 }
 function render(){ renderLog(); renderFbFor(); renderDiag(); renderSliders(); renderPending(); renderStatus(); renderDims(); renderWhy(); renderHistory(); renderTrack(); }
@@ -963,9 +979,19 @@ function recompute(){
     busy=false; render();
   });
 }
+let sprintReleased=false;
 function attachSprint(){
   const res=C().result;
-  if(!res||res.n<1||!sprint){ if(res) res.sprint=null; return; }
+  if(!res||res.n<1){ if(res) res.sprint=null; return; }
+  // 收斂到唯一解就不需要再受「只能動 Front Wing」的限制了，自動解除並給出完整設置
+  if(sprint && res.n===1){
+    sprint=false; sprintReleased=true;
+    $("sprintMode").checked=false;
+    $("sprintLbl").classList.remove("on");
+    res.sprint=null;
+    return;
+  }
+  if(!sprint){ res.sprint=null; return; }
   res.sprint=sprintOptions(constraintsOf(C()),C().setup,res.n);
 }
 // 目前該採用的設置：Sprint 模式下只換 A，其餘沿用鎖定值
@@ -986,7 +1012,7 @@ function gotoRound(i){
   if(i<0||i>=order.length) return;
   ri=i;
   cars=[newCar(),newCar()];      // 換賽道＝全新一場
-  active=0;
+  active=0; sprintReleased=false;
   $("tab0").setAttribute("aria-selected","true"); $("tab1").setAttribute("aria-selected","false");
   $("fbWarn").hidden=true;
   seedFromPrior();
@@ -1048,7 +1074,7 @@ $("backToRec").addEventListener("click",()=>{
   C().setup=recommended(); renderSliders(); renderDims(); renderFbFor();
 });
 $("sprintMode").addEventListener("change",e=>{
-  sprint=e.target.checked;
+  sprint=e.target.checked; if(sprint) sprintReleased=false;
   $("sprintLbl").classList.toggle("on",sprint);
   recompute();
 });
@@ -1072,7 +1098,14 @@ $("logUnsaved").addEventListener("click",e=>{
 $("clearLog").addEventListener("click",()=>{ log=[]; save(); renderLog(); });
 $("diag").addEventListener("click",e=>{
   const f=e.target.closest("button[data-fix]");
-  if(f){ C().history[+f.dataset.fixi].setup=f.dataset.fix.split(",").map(Number); recompute(); return; }
+  if(f){
+    const h=C().history[+f.dataset.fixi];
+    h.setup=f.dataset.fix.split(",").map(Number);
+    if(f.dataset.fixr) h.ratings=f.dataset.fixr.split(",").map(x=>x===""||x==="null"?null:+x);
+    recompute(); return;
+  }
+  const kl=e.target.closest("button[data-keeplast]");
+  if(kl){ const H=C().history; C().history=[H[H.length-1]]; recompute(); return; }
   const a=e.target.closest("button[data-alt]");
   if(a){ C().setup=a.dataset.alt.split(",").map(Number); renderSliders(); renderDims(); renderFbFor(); }
 });
