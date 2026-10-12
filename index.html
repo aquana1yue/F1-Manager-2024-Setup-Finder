@@ -336,10 +336,8 @@ const DIMS=[
   {name:"Straights",base:1,   c:[-1/200,-9/140, 0,     0,     0]},
 ];
 const OPT=39/5600, EPS=1e-9, BINS=400, MERGE_GAP=0.02;
-// Great/Good 的分界由 9 場已確認資料推得，落在 (459/11200, 462/11200]。
-// 真值未知，因此兩側都取到不確定區間的端點 — 寧可多留候選，也不誤刪真解。
-// 兩個上層分界由 26 場已驗證資料推得，真值未知，兩側都取到不確定區間的端點。
-// 三個分界由 71 場已驗證紀錄反推，真值未知，兩側都取到不確定區間的端點。
+// 三個分界由 71 場已驗證紀錄反推，真值未知，兩側都取到不確定區間的端點 —
+// 寧可多留候選，也不誤刪真解。
 const OG_LO=78/11200,   OG_HI=81/11200;     // Optimal/Great (0.006964, 0.007232]
 const GG_LO=459/11200,  GG_HI=460/11200;    // Great/Good    (0.040982, 0.041071]
 const GB_LO=1127/11200, GB_HI=1145/11200;   // Good/Bad      (0.100625, 0.102232]
@@ -383,8 +381,7 @@ const TRACKS=[
   {code:'YAS', key:'abudhabi',     name:'Abu Dhabi GP',            circuit:'Yas Marina',    setups:[[10,8,4,7,9],[10,7,6,12,20],[11,7,7,13,20],[9,8,3,6,5],[9,7,6,15,20],[8,8,3,6,5]]},
 ];
 const SEASON_ORDER=['bahrain','saudi','australian','suzuka','chinese','miami','imola','monaco','montreal','catalunya','spielberg','silverstone','hungaroring','belgian','zandvoort','monza','baku','singapore','austin','mexico','interlagos','lasvegas','losail','abudhabi'];  // 2024 原始賽曆
-const DEFAULT_ORDER=TRACKS.map(t=>t.key);   // 2024 原始賽曆
-let order=SEASON_ORDER.slice();             // 本季賽程，可自訂
+let order=SEASON_ORDER.slice();            // 本季賽程，可自訂
 const byKey=k=>TRACKS.find(t=>t.key===k);
 
 function values(s){
@@ -419,9 +416,12 @@ function applySnapshot(o){
   if(!o||typeof o!=="object") throw new Error("格式不對");
   if(Array.isArray(o.order)){
     const valid=o.order.filter(k=>byKey(k));
-    order=valid.concat(DEFAULT_ORDER.filter(k=>!valid.includes(k)));
+    order=valid.concat(SEASON_ORDER.filter(k=>!valid.includes(k)));
   }
-  if(Array.isArray(o.log)) log=o.log.filter(e=>e&&Array.isArray(e.setup)&&e.setup.length===5).slice(-LOG_MAX);
+  if(Array.isArray(o.log)) log=o.log.filter(e=>e&&Array.isArray(e.setup)&&e.setup.length===5
+      &&Array.isArray(e.ratings)&&e.ratings.length===5)
+    .map(e=>({...e, n:typeof e.n==="number"?e.n:0, solved:Array.isArray(e.solved)?e.solved:null}))
+    .slice(-LOG_MAX);
   if(o.priors&&typeof o.priors==="object"){
     TRACKS.forEach(t=>{
       const s=o.priors[t.key];
@@ -530,9 +530,11 @@ function segments(bins,dim,n){
 }
 
 /* ================= 狀態 ================= */
-function newCar(){return {setup:CENTER.slice(),pending:[null,null,null,null,null],history:[],result:null};}
+// sprint / sprintReleased 是逐車的：兩台車各自收斂、各自解除，互不干擾
+function newCar(){return {setup:CENTER.slice(),pending:[null,null,null,null,null],history:[],result:null,
+  sprint:false,sprintReleased:false};}
 let cars=[newCar(),newCar()];
-let active=0, ri=0, usePrior=true, busy=false, sprint=false;
+let active=0, ri=0, usePrior=true, busy=false;
 const C=()=>cars[active];
 const T=()=>byKey(order[ri]);
 const MU=()=>usePrior?priorMu(T()):null;
@@ -576,10 +578,38 @@ function diagnose(){
   });
   return {suspects, target:suspects[0].i, fixes:suspects[0].fixes, fallback};
 }
+const REPAIR_CAP=20000;
+// 已收斂時：逐一假設「某一輪的某一維其實差了一級」，看答案會跑去哪裡。
+// 只列出會讓答案改變的情況，同一組替代解只列一次，依離先驗（或原解）遠近排序。
+const ALT_MAX=5;
+function alternatives(){
+  const H=C().history, res=C().result;
+  if(!res||res.n!==1) return [];
+  const mu=MU(), ref=mu||values(res.best);
+  const found=new Map();
+  H.forEach((h,ri)=>h.ratings.forEach((r,dim)=>{
+    if(r===null) return;
+    for(const nr of [r-1,r+1]){
+      if(nr<0||nr>3) continue;
+      const rounds=H.map((x,j)=>j!==ri?x:{setup:x.setup,ratings:x.ratings.map((y,k)=>k===dim?nr:y)});
+      const alt=solve(consOfRounds(rounds),mu);
+      if(!alt.n||sameSetup(alt.best,res.best)) continue;
+      const key=alt.best.join(",");
+      const av=values(alt.best);
+      let dist=0; for(let i=0;i<5;i++){ const t=av[i]-ref[i]; dist+=t*t; }
+      const prev=found.get(key);
+      if(!prev||alt.n<prev.n) found.set(key,{setup:alt.best,round:ri,dim,rating:r,n:alt.n,dist});
+    }
+  }));
+  return [...found.values()].sort((a,b)=>a.dist-b.dist||a.n-b.n).slice(0,ALT_MAX);
+}
 function repairRound(idx){
   const H=C().history, rec=H[idx];
   const cons=consOfRounds(H.filter((_,j)=>j!==idx));
-  const S=[]; forEachCandidate(cons,(a,b,c,d,e,v)=>{ if(S.length<800) S.push(v.slice()); });
+  // 均勻抽樣而不是取前 N 個：前 N 個全集中在 Front Wing 低值端，會漏掉真正的修正
+  const total=countOnly(cons), stride=Math.max(1,Math.ceil(total/REPAIR_CAP));
+  const S=[]; let si=0;
+  forEachCandidate(cons,(a,b,c,d,e,v)=>{ if(si++%stride===0) S.push(v.slice()); });
   if(!S.length) return [];
   const fitsWith=(setup,ratings)=>{
     const sv=values(setup);
@@ -751,15 +781,20 @@ function renderSliders(){
     if(d!==0){ chip.hidden=false; chip.textContent=(d>0?"+":"−")+s.d(Math.abs(d)); }
     else chip.hidden=true;
   });
+  const res=C().result;
+  const sp=C().sprint;
+  $("sprintMode").checked=sp;
+  $("sprintLbl").classList.toggle("on",sp);
   SLIDERS.forEach((s,i)=>{
-    const lock = sprint && i>0;
+    const lock = sp && i>0;
     $("sl"+i).classList.toggle("locked",lock);
     $("sr"+i).disabled=lock;
   });
-  $("slHead").textContent = sprint
+  $("slHead").textContent = (C().sprintReleased&&res&&res.n===1)
+    ? "Sprint：已收斂 — Q1 前套用這組完整設置"
+    : sp
     ? "Sprint：只能動 Front Wing"
     : (C().history.length ? "下一組設置（黃色＝與上一輪不同）" : "本輪設置");
-  const res=C().result;
   const rc=res&&res.n>0?recommended():null;
   $("backToRec").disabled = !(rc&&rc.some((x,i)=>x!==C().setup[i]));
 }
@@ -803,12 +838,12 @@ function renderWhy(){
   const res=C().result, mu=MU();
   if(!res||res.n===0){ $("recWhy").textContent=""; return; }
   if(res.n===1){
-    $("recWhy").innerHTML = sprintReleased
+    $("recWhy").innerHTML = C().sprintReleased
       ? `已收斂到唯一解 — <em>Sprint 限制自動解除</em>，上面是五根滑桿的完整 100% 設置，正賽 Q1 前直接套用。`
       : "只剩一組解，上面就是本場的最終設置。";
     return;
   }
-  if(sprint&&res.sprint&&res.sprint.length){
+  if(C().sprint&&res.sprint&&res.sprint.length){
     const o=res.sprint, best=o[0], worst=o[o.length-1];
     const chips=o.slice(0,5).map((x,i)=>
       `<span class="aopt${i===0?" best":""}">${SLIDERS[0].fmt(x.a)} → 剩 ${x.exp<10?x.exp.toFixed(1):Math.round(x.exp)}</span>`).join("");
@@ -979,26 +1014,24 @@ function recompute(){
     busy=false; render();
   });
 }
-let sprintReleased=false;
 function attachSprint(){
-  const res=C().result;
+  const car=C(), res=car.result;
   if(!res||res.n<1){ if(res) res.sprint=null; return; }
-  // 收斂到唯一解就不需要再受「只能動 Front Wing」的限制了，自動解除並給出完整設置
-  if(sprint && res.n===1){
-    sprint=false; sprintReleased=true;
-    $("sprintMode").checked=false;
-    $("sprintLbl").classList.remove("on");
+  // 這台車收斂到唯一解 = Sprint 中的資訊增益已完成，自動解除它自己的限制，
+  // 給出五根滑桿的完整設置等 Q1 前套用；另一台車的開關不受影響
+  if(car.sprint && res.n===1){
+    car.sprint=false; car.sprintReleased=true;
     res.sprint=null;
     return;
   }
-  if(!sprint){ res.sprint=null; return; }
-  res.sprint=sprintOptions(constraintsOf(C()),C().setup,res.n);
+  if(!car.sprint){ res.sprint=null; return; }
+  res.sprint=sprintOptions(constraintsOf(car),car.setup,res.n);
 }
 // 目前該採用的設置：Sprint 模式下只換 A，其餘沿用鎖定值
 function recommended(){
   const res=C().result;
   if(!res||res.n<1) return C().setup.slice();
-  if(sprint&&res.sprint&&res.sprint.length){
+  if(C().sprint&&res.sprint&&res.sprint.length){
     const s=C().setup.slice(); s[0]=res.sprint[0].a; return s;
   }
   return res.best.slice();
@@ -1012,7 +1045,7 @@ function gotoRound(i){
   if(i<0||i>=order.length) return;
   ri=i;
   cars=[newCar(),newCar()];      // 換賽道＝全新一場
-  active=0; sprintReleased=false;
+  active=0;
   $("tab0").setAttribute("aria-selected","true"); $("tab1").setAttribute("aria-selected","false");
   $("fbWarn").hidden=true;
   seedFromPrior();
@@ -1029,7 +1062,7 @@ $("editCal").addEventListener("click",()=>{
 });
 $("closeCal").addEventListener("click",()=>{ $("editor").hidden=true; });
 $("resetCal").addEventListener("click",()=>{
-  const cur=order[ri]; order=DEFAULT_ORDER.slice(); ri=order.indexOf(cur);
+  const cur=order[ri]; order=SEASON_ORDER.slice(); ri=order.indexOf(cur);
   save(); renderCal(); renderEditor(); renderTrack();
 });
 $("editorBody").addEventListener("click",e=>{
@@ -1046,6 +1079,8 @@ $("usePrior").addEventListener("change",e=>{ usePrior=e.target.checked; seedFrom
   recompute();
 }));
 $("record").addEventListener("click",()=>{
+  // 計算中連點會把同一輪記兩次（第二次是全空的回饋）
+  if(busy||C().pending.every(p=>p===null)) return;
   const before=C().result?C().result.n:0;
   C().history.push({setup:C().setup.slice(),ratings:C().pending.slice()});
   C().pending=[null,null,null,null,null];
@@ -1074,12 +1109,13 @@ $("backToRec").addEventListener("click",()=>{
   C().setup=recommended(); renderSliders(); renderDims(); renderFbFor();
 });
 $("sprintMode").addEventListener("change",e=>{
-  sprint=e.target.checked; if(sprint) sprintReleased=false;
-  $("sprintLbl").classList.toggle("on",sprint);
+  C().sprint=e.target.checked;
+  if(C().sprint) C().sprintReleased=false;
   recompute();
 });
 $("reset").addEventListener("click",()=>{
-  cars[active]=newCar(); seedFromPrior(); $("fbWarn").hidden=true; recompute();
+  const sp=C().sprint;                       // 清回合不清 Sprint 開關：週末型態沒變
+  cars[active]=newCar(); C().sprint=sp; seedFromPrior(); $("fbWarn").hidden=true; recompute();
 });
 $("addPrior").addEventListener("click",()=>{
   const res=C().result; if(!res||res.n!==1) return;
@@ -1142,8 +1178,8 @@ $("fromText").addEventListener("click",()=>{
 });
 $("toCode").addEventListener("click",()=>{
   const pad=(s,n)=>(s+"'").padEnd(n," ");
-  $("io").value="const TRACKS=[\n"+order.map(k=>{
-    const t=byKey(k);
+  // 依母表順序輸出，不跟著自訂賽程走 — 貼回去之後母表順序才不會被改掉
+  $("io").value="const TRACKS=[\n"+TRACKS.map(t=>{
     return "  {code:'"+t.code+"', key:"+pad("'"+t.key,15)+", name:"+pad("'"+t.name,26)+", circuit:"+pad("'"+t.circuit,16)+", setups:["
       +t.setups.map(s=>"["+s.join(",")+"]").join(",")+"]},";
   }).join("\n")+"\n];";
