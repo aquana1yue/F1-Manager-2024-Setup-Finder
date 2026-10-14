@@ -201,6 +201,16 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .lrow .add:hover{background:var(--great);color:#0c151d}
 textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--line);color:var(--text);font-family:var(--mono);font-size:11.5px;padding:9px;resize:vertical}
 .samples{font-family:var(--mono);font-size:12px;color:var(--dim);padding:0 14px 12px;line-height:1.7}
+.srow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;white-space:pre}
+.srow .no{color:var(--faint)}
+.srow .sv{color:var(--faint)}
+.srow .rep{color:var(--rec);font-size:11px}
+.sdel{margin-left:auto;border:none;color:var(--faint);font-size:11.5px;padding:1px 6px}
+.sdel:hover{color:var(--bad);border:none}
+.sdel.armed{color:#0c151d;background:var(--bad);font-weight:600}
+.lbtn{margin-left:auto;display:flex;gap:6px}
+.lrow .ign{padding:3px 8px;font-size:11.5px;color:var(--faint)}
+.lrow .ign:hover{border-color:var(--bad);color:var(--bad)}
 @media(prefers-reduced-motion:no-preference){.seg,.mark{transition:left .18s ease,width .18s ease}}
 </style>
 </head>
@@ -264,7 +274,7 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
       <div class="legend">
         <span><i style="background:var(--band)"></i>可能解分布</span>
         <span><i style="background:var(--cur)"></i>本輪設置</span>
-        <span><i style="background:var(--mu)"></i>賽道先驗 μ ± 0.044</span>
+        <span><i style="background:var(--mu)"></i>先驗平均 μ ± 0.044（選點改看落點密度）</span>
       </div>
     </section>
 
@@ -291,7 +301,7 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
   <h2>賽道先驗資料</h2>
   <div class="samples" id="samples"></div>
   <p class="hint" id="priorMsg" hidden></p>
-  <div class="actions"><button id="addPrior">把這組解加入本賽道</button><button id="delPrior">刪掉本賽道最後一筆</button></div>
+  <div class="actions"><button id="addPrior">把這組解加入本賽道</button></div>
 </section>
 
 <section class="panel">
@@ -351,6 +361,11 @@ const RATINGS=[
 const CUT=[(OG_LO+OG_HI)/2, (GG_LO+GG_HI)/2, (GB_LO+GB_HI)/2];
 // 浮動半寬：24 條賽道、59 組配對差，平均 |Δ| 0.0266 → h ≈ 1.5×（分布比均勻更集中於 0）
 const PRIOR_H=0.044;
+// 先驗選點用核密度估計（KDE）：每筆歷史解是一個高斯核，帶寬 KDE_H（五維數值空間）。
+// 參數由 24 條賽道、留一法回測選出，見 commit 說明。
+const KDE_H=0.02, KDE_K=1/(2*KDE_H*KDE_H);
+const PICK_INFO=true;     // 剩餘解 ≤ INFO_MAX 時改用資訊增益選點
+const INFO_MAX=3000;
 const CENTER=[10,7,4,8,10];
 
 // 賽道母表。setups 是各賽道歷史最終設置（滑桿 index）。
@@ -480,7 +495,7 @@ function forEachCandidate(cons,cb){
     }
   }
 }
-function solve(cons,mu){
+function solve(cons,pts,noInfo){
   let n=0;
   const sum=[0,0,0,0,0], mn=[9,9,9,9,9], mx=[-9,-9,-9,-9,-9];
   const bins=new Int32Array(5*BINS);
@@ -495,20 +510,53 @@ function solve(cons,mu){
   });
   if(n===0) return {n:0};
   const mean=sum.map(x=>x/n);
-  const ref = mu || mean;               // 有先驗按離 μ 的距離排序，否則取幾何中心
-  let best=null,bd=Infinity;
+  // 有先驗：挑「先驗落點密度」最高的候選（KDE），而不是離平均 μ 最近的。
+  // 平均值在雙峰或貼邊界的賽道（例如摩納哥）會落在兩群中間、或永遠在邊界內側，
+  // 導致選點一格一格往外爬。沒有先驗才退回幾何中心。
+  let best=null, bs=-Infinity, mode="center";
+  const keep = pts && n<=INFO_MAX && n>1 ? [] : null;
   forEachCandidate(cons,(a,b,c,d,e,v)=>{
-    let dd=0;
-    for(let i=0;i<5;i++){const t=v[i]-ref[i]; dd+=t*t;}
-    if(dd<bd){bd=dd; best=[a,b,c,d,e];}
+    let s;
+    if(pts) s=kde(v,pts);
+    else { s=0; for(let i=0;i<5;i++){const t=v[i]-mean[i]; s-=t*t;} }
+    if(s>bs){bs=s; best=[a,b,c,d,e];}
+    if(keep) keep.push({s:[a,b,c,d,e], v:v.slice(), w:s+1e-6});
   });
-  return {n,min:mn,max:mx,mean,best,bins,usedPrior:!!mu};
+  if(pts) mode="kde";
+  if(keep&&PICK_INFO&&!noInfo){ best=infoPick(keep); mode="info"; }
+  return {n,min:mn,max:mx,mean,best,bins,usedPrior:!!pts,mode};
 }
-function nearestGrid(mu){
-  let best=null,bd=Infinity;
+// 剩下的解夠少時：在候選裡挑「期望剩餘解最少」的那組（依先驗密度加權），
+// 並把「直接命中、這輪就收工」的機率算進去。只在候選解中挑，所以每一輪都有機會就是答案。
+function infoPick(cs){
+  const W=cs.reduce((a,c)=>a+c.w,0);
+  let best=null, be=Infinity, bw=-1;
+  for(const p of cs){
+    const map=new Map();
+    for(const q of cs){
+      let sig=0;
+      for(let k=0;k<5;k++) sig=sig*4+rateOf(Math.abs(p.v[k]-q.v[k]));
+      map.set(sig,(map.get(sig)||0)+q.w);
+    }
+    let ss=0; for(const m of map.values()) ss+=m*m;
+    const e=ss/W - p.w/W;
+    if(e<be-1e-12 || (Math.abs(e-be)<=1e-12 && p.w>bw)){ be=e; best=p.s; bw=p.w; }
+  }
+  return best.slice();
+}
+function kde(v,pts){
+  let s=0;
+  for(let j=0;j<pts.length;j++){
+    const p=pts[j]; let dd=0;
+    for(let i=0;i<5;i++){const t=v[i]-p[i]; dd+=t*t;}
+    s+=Math.exp(-dd*KDE_K);
+  }
+  return s;
+}
+function kdeModeGrid(pts){
+  let best=null,bs=-Infinity;
   forEachCandidate([[],[],[],[],[]],(a,b,c,d,e,v)=>{
-    let dd=0; for(let i=0;i<5;i++){const t=v[i]-mu[i]; dd+=t*t;}
-    if(dd<bd){bd=dd; best=[a,b,c,d,e];}
+    const s=kde(v,pts); if(s>bs){bs=s; best=[a,b,c,d,e];}
   });
   return best;
 }
@@ -531,13 +579,15 @@ function segments(bins,dim,n){
 
 /* ================= 狀態 ================= */
 // sprint / sprintReleased 是逐車的：兩台車各自收斂、各自解除，互不干擾
-function newCar(){return {setup:CENTER.slice(),pending:[null,null,null,null,null],history:[],result:null,
+const newSid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function newCar(){return {sid:newSid(),setup:CENTER.slice(),pending:[null,null,null,null,null],history:[],result:null,
   sprint:false,sprintReleased:false};}
 let cars=[newCar(),newCar()];
 let active=0, ri=0, usePrior=true, busy=false;
 const C=()=>cars[active];
 const T=()=>byKey(order[ri]);
-const MU=()=>usePrior?priorMu(T()):null;
+const MU=()=>usePrior?priorMu(T()):null;                       // 顯示用：平均落點
+const PRI=()=>usePrior&&T().setups.length?T().setups.map(values):null;  // 選點用：每筆歷史解
 const lastSetup=()=>C().history.length?C().history[C().history.length-1].setup:null;
 
 function constraintsOf(car){
@@ -565,7 +615,7 @@ function diagnose(){
   const H=C().history;
   if(H.length<2) return null;
   const last=H.length-1;
-  const fallback=solve(consOfRounds([H[last]]),MU());   // 只採信最後一輪 + 先驗
+  const fallback=solve(consOfRounds([H[last]]),PRI());   // 只採信最後一輪 + 先驗
   const suspects=[];
   for(let i=0;i<last;i++){
     const n=countOnly(consOfRounds(H.filter((_,j)=>j!==i)));
@@ -585,14 +635,14 @@ const ALT_MAX=5;
 function alternatives(){
   const H=C().history, res=C().result;
   if(!res||res.n!==1) return [];
-  const mu=MU(), ref=mu||values(res.best);
+  const mu=MU(), pts=PRI(), ref=mu||values(res.best);
   const found=new Map();
   H.forEach((h,ri)=>h.ratings.forEach((r,dim)=>{
     if(r===null) return;
     for(const nr of [r-1,r+1]){
       if(nr<0||nr>3) continue;
       const rounds=H.map((x,j)=>j!==ri?x:{setup:x.setup,ratings:x.ratings.map((y,k)=>k===dim?nr:y)});
-      const alt=solve(consOfRounds(rounds),mu);
+      const alt=solve(consOfRounds(rounds),pts,true);   // 問的是「最可能的答案」，不需要資訊增益
       if(!alt.n||sameSetup(alt.best,res.best)) continue;
       const key=alt.best.join(",");
       const av=values(alt.best);
@@ -687,18 +737,55 @@ function sprintOptions(cons,base,n){
 function sameSetup(a,b){ return a.every((x,i)=>x===b[i]); }
 function inPriors(key,s){ const t=byKey(key); return !!t&&t.setups.some(x=>sameSetup(x,s)); }
 function pushLog(e){ log.push(e); if(log.length>LOG_MAX) log=log.slice(-LOG_MAX); save(); }
-// 已收斂但沒被寫進先驗的結果（同一條賽道同一組解只列一次）
+// 「有沒有存過」看的是這一場（sid＝某台車在某條賽道的一次找解）有沒有把結果寫進先驗，
+// 而不是先驗裡有沒有一樣的設置 — 重複落點本身就是要記的樣本。
+// 舊版履歷沒有 sid，沿用舊規則（先驗裡已有就不列）。
+const sessKey=e=>e.sid ? "s:"+e.sid : "l:"+e.track+"|"+e.solved.join(",");
+function sessEntries(e){ return log.filter(x=>x.solved && sessKey(x)===sessKey(e)); }
+function sessSaved(e){            // 這一場已經存進先驗的解（若有）
+  const x=sessEntries(e).find(x=>x.saved); return x?x.solved:null;
+}
+function markSess(e,flag,solved,val=true){
+  sessEntries(e).forEach(x=>{ if(!solved||sameSetup(x.solved,solved)) x[flag]=val; });
+}
+// 每一場只看最新一次的收斂結果；已存或已忽略的不列
 function unsavedSolved(){
   const seen=new Set(), out=[];
   for(let i=log.length-1;i>=0;i--){
     const e=log[i]; if(!e.solved) continue;
-    if(inPriors(e.track,e.solved)) continue;
-    const k=e.track+"|"+e.solved.join(",");
-    if(seen.has(k)) continue;
-    seen.add(k); out.push(e);
+    const k=sessKey(e); if(seen.has(k)) continue; seen.add(k);
+    if(e.saved||e.dismissed) continue;
+    if(!e.sid && inPriors(e.track,e.solved)) continue;
+    const prev=sessSaved(e);
+    out.push({e, replaces: prev&&!sameSetup(prev,e.solved) ? prev : null});
   }
   return out;
 }
+// 把某一場的結果寫進先驗；若這一場先前存過另一組（之後被修正），先拿掉舊的那筆
+function commitSolved(e,replace){
+  const t=byKey(e.track); if(!t) return;
+  if(replace){
+    for(let i=t.setups.length-1;i>=0;i--) if(sameSetup(t.setups[i],replace)){ t.setups.splice(i,1); break; }
+    markSess(e,"saved",replace,false); markSess(e,"dismissed",replace);
+  }
+  t.setups.push(e.solved.slice());
+  markSess(e,"saved",e.solved);
+  save();
+}
+// 目前這台車這一場：存過的解、以及對應目前結果的那筆收斂紀錄（沒有就補一筆，
+// 例如結果是靠「改成這樣」修正出來、而不是記錄回饋時收斂的）
+function sessSavedNow(){
+  const x=log.find(e=>e.sid===C().sid && e.solved && e.saved); return x?x.solved:null;
+}
+function currentSolvedEntry(best){
+  const sid=C().sid;
+  for(let i=log.length-1;i>=0;i--){ const e=log[i]; if(e.sid===sid && e.solved && sameSetup(e.solved,best)) return e; }
+  const e={t:Date.now(), sid, track:order[ri], car:active, setup:best.slice(),
+           ratings:[null,null,null,null,null], n:1, solved:best.slice()};
+  log.push(e); if(log.length>LOG_MAX) log=log.slice(-LOG_MAX);
+  return e;
+}
+let delArm=null;   // 先驗逐筆刪除：第一下變「確定刪除？」，3 秒內再按一下才刪
 
 /* ================= 介面 ================= */
 const $=id=>document.getElementById(id);
@@ -855,11 +942,11 @@ function renderWhy(){
     return;
   }
   if(!mu){ $("recWhy").textContent="沒有可用的賽道先驗，改取剩餘解集合的幾何中心。"; return; }
-  const rv=values(res.best);
-  const out=DIMS.map((d,i)=>Math.abs(rv[i]-mu[i])>PRIOR_H+EPS?d.name:null).filter(Boolean);
-  $("recWhy").innerHTML = out.length
-    ? `依先驗排序。<em>${out.join("、")}</em> 已被回饋推出 μ ± ${PRIOR_H} 之外 — 這幾維改以資料為準。`
-    : `依先驗排序，五維都落在 <b>μ ± ${PRIOR_H}</b> 內。`;
+  const same=T().setups.filter(s=>sameSetup(s,res.best)).length;
+  const hit = same ? `（和 <b>${same}</b> 筆歷史解完全相同）` : `（不是任何一筆歷史解，取最接近歷史落點群的那組）`;
+  $("recWhy").innerHTML = res.mode==="info"
+    ? `剩 ${res.n.toLocaleString("en-US")} 組，改挑<em>期望剩餘解最少</em>的那組 — 依先驗落點密度加權，並把這輪直接命中的機率算進去${hit}。`
+    : `依先驗落點密度挑選：剩下的 ${res.n.toLocaleString("en-US")} 組裡最像過去結果的那組${hit}。`;
 }
 function renderStatus(){
   const res=C().result, n=$("count"), l=$("countLbl");
@@ -893,12 +980,23 @@ function renderTrack(){
   $("pstat").innerHTML = t.setups.length
     ? `${t.setups.length} 筆樣本 · μ = <b>${mu.map(x=>x.toFixed(3)).join("  ")}</b>`
     : `沒有紀錄 — 起手用中性值，選點退回幾何中心`;
+  const cnt=new Map(); t.setups.forEach(s=>{const k=s.join(); cnt.set(k,(cnt.get(k)||0)+1);});
   $("samples").innerHTML = t.setups.length
-    ? t.setups.map((s,i)=>`${String(i+1).padStart(2)}　${s.map((x,j)=>SLIDERS[j].k+String(x).padStart(2)).join(" ")}　→　${values(s).map(v=>v.toFixed(3)).join("  ")}`).join("<br>")
+    ? t.setups.map((s,i)=>{
+        const k=s.join(), armed=delArm&&delArm.key===t.key&&delArm.i===i;
+        const rep=cnt.get(k)>1?`<span class="rep">×${cnt.get(k)}</span>`:"";
+        return `<div class="srow"><span class="no">${String(i+1).padStart(2)}</span>`
+          +`<span>${s.map((x,j)=>SLIDERS[j].k+String(x).padStart(2)).join(" ")}</span>${rep}`
+          +`<span class="sv">→ ${values(s).map(v=>v.toFixed(3)).join("  ")}</span>`
+          +`<button class="sdel${armed?" armed":""}" data-i="${i}">${armed?"確定刪除？":"刪除"}</button></div>`;
+      }).join("")
     : `<span style="color:var(--faint)">收斂到 1 組解之後，按下方按鈕把結果存進這條賽道。</span>`;
-  const res=C().result;
-  $("addPrior").disabled=!(res&&res.n===1);
-  $("delPrior").disabled=!t.setups.length;
+  const res=C().result, ap=$("addPrior");
+  if(res&&res.n===1){
+    const prev=sessSavedNow();
+    if(prev&&sameSetup(prev,res.best)){ ap.disabled=true; ap.textContent="本場結果已存入"; }
+    else { ap.disabled=false; ap.textContent = prev ? "改存這組（取代本場先前存的 "+setupStr(prev)+"）" : "把這組解加入本賽道"; }
+  } else { ap.disabled=true; ap.textContent="把這組解加入本賽道"; }
   $("prevR").disabled=ri===0; $("nextR").disabled=ri===order.length-1;
 }
 
@@ -912,14 +1010,20 @@ function renderLog(){
   const un=unsavedSolved();
   $("logBadge").innerHTML = un.length ? `<span class="badge2">${un.length} 筆待補存</span>` : "";
   $("logUnsaved").innerHTML = un.length
-    ? `<div class="lsec">已收斂、但還沒寫進先驗</div>` + un.map(e=>{
-        const t=byKey(e.track);
+    ? `<div class="lsec">已收斂、但還沒寫進先驗</div>` + un.map(({e,replaces})=>{
+        const t=byKey(e.track), li=log.indexOf(e);
+        const dup=t&&t.setups.some(s=>sameSetup(s,e.solved));
         return `<div class="lrow solved">
           <span class="tm">${fmtTime(e.t)}</span>
           <span class="tr">${t?t.code:e.track}</span>
           <span class="cr">Car ${e.car+1}</span>
           <span class="st">${setupStr(e.solved)}</span>
-          <button class="add" data-t="${e.track}" data-s="${e.solved.join(",")}">補存為先驗</button>
+          ${dup?`<span class="cr">先驗已有相同設置，照樣記一筆</span>`:""}
+          ${replaces?`<span class="cr">本場先前存的是 ${setupStr(replaces)}</span>`:""}
+          <span class="lbtn">
+            <button class="add" data-li="${li}" data-rep="${replaces?replaces.join(","):""}">${replaces?"改存這組":"補存為先驗"}</button>
+            <button class="ign" data-li="${li}" title="收斂結果是錯的，不要存">忽略</button>
+          </span>
         </div>`; }).join("")
     : "";
   const recent=log.slice(-40).reverse();
@@ -1009,7 +1113,7 @@ function render(){ renderLog(); renderFbFor(); renderDiag(); renderSliders(); re
 function recompute(){
   busy=true; renderStatus();
   requestAnimationFrame(()=>{
-    C().result=solve(constraintsOf(C()),MU());
+    C().result=solve(constraintsOf(C()),PRI());
     attachSprint();
     busy=false; render();
   });
@@ -1037,8 +1141,8 @@ function recommended(){
   return res.best.slice();
 }
 function seedFromPrior(){
-  const mu=MU();
-  const s = mu?nearestGrid(mu):CENTER.slice();
+  const pts=PRI();
+  const s = pts?kdeModeGrid(pts):CENTER.slice();
   cars.forEach(c=>{ if(!c.history.length) c.setup=s.slice(); });
 }
 function gotoRound(i){
@@ -1086,10 +1190,10 @@ $("record").addEventListener("click",()=>{
   C().pending=[null,null,null,null,null];
   busy=true; renderStatus();
   requestAnimationFrame(()=>{
-    const res=solve(constraintsOf(C()),MU());
+    const res=solve(constraintsOf(C()),PRI());
     C().result=res; attachSprint();
     const rec=C().history[C().history.length-1];
-    pushLog({t:Date.now(), track:order[ri], car:active, setup:rec.setup.slice(),
+    pushLog({t:Date.now(), sid:C().sid, track:order[ri], car:active, setup:rec.setup.slice(),
              ratings:rec.ratings.slice(), n:res.n, solved:res.n===1?res.best.slice():null});
     if(res.n>0) C().setup=recommended();         // 直接套用下一組建議
     busy=false; render();
@@ -1117,19 +1221,50 @@ $("reset").addEventListener("click",()=>{
   const sp=C().sprint;                       // 清回合不清 Sprint 開關：週末型態沒變
   cars[active]=newCar(); C().sprint=sp; seedFromPrior(); $("fbWarn").hidden=true; recompute();
 });
+function afterPriorChange(){
+  renderCal(); renderTrack(); renderLog(); renderDims(); renderWhy();
+  // 先驗變了，沒開始跑的車重新起手；已有回合的車重新排序候選
+  if(cars.some(c=>!c.history.length)) seedFromPrior();
+  recompute();
+}
 $("addPrior").addEventListener("click",()=>{
   const res=C().result; if(!res||res.n!==1) return;
+  const prev=sessSavedNow();
+  if(prev&&sameSetup(prev,res.best)) return;           // 同一場不重複存
   const dup=inPriors(T().key,res.best);
-  T().setups.push(res.best.slice()); save(); renderCal(); renderTrack(); renderDims(); renderWhy(); renderLog();
+  commitSolved(currentSolvedEntry(res.best), prev);
   const m=$("priorMsg");
-  m.hidden=!dup;
-  if(dup) m.textContent="本賽道已有一筆完全相同的設置。這通常是真的重複落點（同場兩台車、或跨季落回同一點），本身就是有價值的樣本，照常保留。";
+  m.hidden=!(dup||prev);
+  m.textContent = prev
+    ? "已用這組取代本場先前存的 "+setupStr(prev)+"。"
+    : "本賽道已有一筆完全相同的設置。重複落點本身就是有價值的樣本（代表這組常被抽中），照常記一筆。";
+  afterPriorChange();
 });
 $("logUnsaved").addEventListener("click",e=>{
-  const b=e.target.closest(".add"); if(!b) return;
-  const t=byKey(b.dataset.t); if(!t) return;
-  t.setups.push(b.dataset.s.split(",").map(Number));
-  save(); renderCal(); renderTrack(); renderLog(); renderDims(); renderWhy();
+  const b=e.target.closest("button[data-li]"); if(!b) return;
+  const en=log[+b.dataset.li]; if(!en||!en.solved) return;
+  if(b.classList.contains("ign")){ markSess(en,"dismissed",en.solved); save(); renderLog(); renderTrack(); return; }
+  commitSolved(en, b.dataset.rep ? b.dataset.rep.split(",").map(Number) : null);
+  afterPriorChange();
+});
+$("samples").addEventListener("click",e=>{
+  const b=e.target.closest(".sdel"); if(!b) return;
+  const t=T(), i=+b.dataset.i;
+  if(!(delArm&&delArm.key===t.key&&delArm.i===i)){
+    clearTimeout(delArm&&delArm.timer);
+    delArm={key:t.key,i,timer:setTimeout(()=>{delArm=null; renderTrack();},3000)};
+    renderTrack(); return;
+  }
+  clearTimeout(delArm.timer); delArm=null;
+  const [gone]=t.setups.splice(i,1);
+  // 被刪掉的那組若來自某一場的收斂結果（優先當前這場，否則最近一場），把那一場改標成「忽略」，
+  // 免得又跑回待補存清單；其他剛好落在同一點的場次不受影響
+  const src = log.find(x=>x.sid===C().sid&&x.saved&&sameSetup(x.solved,gone))
+           || [...log].reverse().find(x=>x.track===t.key&&x.solved&&x.saved&&sameSetup(x.solved,gone));
+  if(src){ markSess(src,"saved",gone,false); markSess(src,"dismissed",gone); }
+  save();
+  const m=$("priorMsg"); m.hidden=false; m.textContent="已刪除 "+setupStr(gone)+"。";
+  afterPriorChange();
 });
 $("clearLog").addEventListener("click",()=>{ log=[]; save(); renderLog(); });
 $("diag").addEventListener("click",e=>{
@@ -1144,10 +1279,6 @@ $("diag").addEventListener("click",e=>{
   if(kl){ const H=C().history; C().history=[H[H.length-1]]; recompute(); return; }
   const a=e.target.closest("button[data-alt]");
   if(a){ C().setup=a.dataset.alt.split(",").map(Number); renderSliders(); renderDims(); renderFbFor(); }
-});
-$("delPrior").addEventListener("click",()=>{
-  const t=T(); if(!t.setups.length) return;
-  t.setups.pop(); save(); renderCal(); renderTrack(); renderDims(); renderWhy(); seedFromPrior(); recompute();
 });
 
 /* ---- 備份 ---- */
