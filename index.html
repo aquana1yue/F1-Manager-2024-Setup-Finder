@@ -212,14 +212,136 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
 .lrow .ign{padding:3px 8px;font-size:11.5px;color:var(--faint)}
 .lrow .ign:hover{border-color:var(--bad);color:var(--bad)}
 @media(prefers-reduced-motion:no-preference){.seg,.mark{transition:left .18s ease,width .18s ease}}
+
+/* ---- 三欄版面：寬螢幕左 ATR、右輪胎；不夠寬時兩側退到主內容下方 ---- */
+.shell{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "tyre" "atr"}
+.shell > .wrap{grid-area:main;width:100%}
+#atrSide{grid-area:atr} #tyreSide{grid-area:tyre}
+.side{width:100%;max-width:1080px;margin:0 auto;padding:0 20px 40px}
+.side .panel + .panel{margin-top:18px}
+@media(min-width:1440px){
+  .shell{grid-template-columns:minmax(290px,350px) minmax(0,1080px) minmax(320px,400px);
+         grid-template-areas:"atr main tyre";justify-content:center;column-gap:4px}
+  .shell > .wrap{margin:0}
+  .side{max-width:none;margin:0;padding:26px 0 40px;position:sticky;top:0;align-self:start;
+        max-height:100vh;overflow-y:auto;scrollbar-width:thin}
+  #atrSide{padding-left:16px} #tyreSide{padding-right:16px}
+}
+header .season{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dim);margin-left:auto}
+header .season input{width:66px;background:var(--sunk);border:1px solid var(--line);color:var(--text);font-size:13px;padding:3px 6px}
+header .season button{padding:2px 8px;font-size:13px}
+header .season + .save{margin-left:10px}
+
+.side input:not([type=checkbox]),.side select{width:100%;background:var(--sunk);border:1px solid var(--line);color:var(--text);
+  font-family:var(--mono);font-size:13px;padding:5px 7px}
+.side input:focus,.side select:focus{outline:none;border-color:var(--band)}
+.side label{display:block;font-size:11.5px;color:var(--faint)}
+.side label > input,.side label > select{margin-top:3px}
+.side .note{font-family:var(--sans)}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.chips.two{grid-template-columns:1fr 1fr} .chips.four{grid-template-columns:repeat(4,1fr)} .chips.five{grid-template-columns:repeat(5,1fr)}
+.chip{font-size:11.5px;padding:5px 2px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip[aria-pressed=true]{background:var(--band);border-color:var(--band);color:#08131a;font-weight:600}
+.chip.c-s[aria-pressed=true]{background:#e2604f;border-color:#e2604f}
+.chip.c-m[aria-pressed=true]{background:#e8b93f;border-color:#e8b93f}
+.chip.c-h[aria-pressed=true]{background:#dce8ef;border-color:#dce8ef}
+.chip.c-i[aria-pressed=true]{background:#3fc97a;border-color:#3fc97a}
+.chip.c-w[aria-pressed=true]{background:#4fb8dd;border-color:#4fb8dd}
+.atr-tot{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--line-soft)}
+.atr-tot .quota{grid-column:1/-1;font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+.atr-form,.ty-form{display:flex;flex-direction:column;gap:9px}
+.hrs{display:grid;grid-template-columns:38px 1fr auto auto;gap:5px;align-items:center}
+.hrs label{font-size:12px;color:var(--dim)}
+.hrs .q{font-family:var(--mono);font-size:11px;padding:4px 7px;color:var(--dim)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.ferr{color:var(--bad);font-size:12px;margin:0}
+.tylive{font-family:var(--mono);font-size:12.5px;color:var(--dim);min-height:18px}
+.tylive b{color:var(--rec);font-weight:600}
+.tagrow .tags{margin-top:5px}
+.tag.user{border-color:var(--line);color:var(--rec)}
+.tag button{border:none;padding:0 0 0 5px;font-size:11px;color:var(--faint)}
+.side label.excl{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);cursor:pointer}
+.excl input{accent-color:var(--bad)}
+/* ATR 圖表 */
+.abl{padding:10px 14px 4px;border-top:1px solid var(--line-soft)}
+.abl .t{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:6px}
+.abl .t b{font-family:var(--mono);font-weight:400;color:var(--text)}
+.abar{position:relative;display:flex;height:12px;background:var(--sunk);border:1px solid var(--line-soft);overflow:hidden}
+.abar i{display:block;height:100%}
+.abar i.d{background:var(--band)} .abar i.r{background:var(--optimal)}
+.abar.over{border-color:var(--bad)}
+.arow{display:grid;grid-template-columns:78px 1fr 52px;gap:8px;align-items:center;font-size:11.5px;color:var(--faint);margin:4px 0}
+.arow .abar{height:8px}
+.arow .v{text-align:right;font-family:var(--mono);color:var(--dim)}
+.alg{display:flex;gap:12px;font-size:11px;color:var(--faint);padding:2px 14px 10px}
+.alg i{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:-1px}
+.erow2{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:3px 8px;padding:6px 14px;font-size:12px;border-top:1px solid var(--line-soft)}
+.erow2 .p{color:var(--text)}
+.erow2 .k{font-family:var(--mono);font-size:10.5px;padding:0 4px;border:1px solid var(--line)}
+.erow2 .k.d{color:var(--band);border-color:var(--band)} .erow2 .k.r{color:var(--optimal);border-color:var(--optimal)}
+.erow2 .h{font-family:var(--mono);color:var(--dim)}
+.erow2 .nt{color:var(--faint);grid-column:1/-1;font-size:11.5px}
+.erow2 .x{border:none;color:var(--faint);font-size:11.5px;padding:1px 6px}
+.erow2 .x:hover{color:var(--bad);border:none}
+.x.armed,.ydel.armed{color:#0c151d!important;background:var(--bad);font-weight:600}
+details.yr{border-top:1px solid var(--line-soft)}
+details.yr summary{padding:9px 14px;cursor:pointer;font-size:12.5px;color:var(--dim);font-family:var(--mono)}
+details.yr .ydel{margin:6px 14px 12px;font-size:11.5px;padding:3px 8px;color:var(--faint)}
+/* 輪胎統計 */
+.tst{border-top:1px solid var(--line-soft);padding:10px 14px}
+.tst .hd{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin-bottom:6px;flex-wrap:wrap}
+.tst .hd input{width:52px;padding:2px 5px;font-size:12px}
+.tst table{width:100%;border-collapse:collapse;font-size:11.5px}
+.tst th{text-align:left;font-weight:400;color:var(--faint);padding:3px 4px;border-bottom:1px solid var(--line-soft)}
+.tst td{padding:4px;font-family:var(--mono);color:var(--dim);border-bottom:1px solid var(--line-soft)}
+.tst td b{color:var(--rec);font-weight:600}
+.tst .ex{font-size:11px;color:var(--faint);margin-top:6px}
+.trow{padding:7px 14px;border-top:1px solid var(--line-soft);font-size:11.5px;display:grid;grid-template-columns:1fr auto;gap:2px 8px}
+.trow.ex{opacity:.55}
+.trow .a{font-family:var(--mono);color:var(--dim)}
+.trow .a b{color:var(--text);font-weight:600}
+.trow .c{color:var(--faint)}
+.trow .r{grid-row:1/span 2;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.trow .r .pl{font-family:var(--mono);font-size:13px;color:var(--rec)}
+.trow .x{border:none;color:var(--faint);font-size:11px;padding:1px 4px}
+.trow .x:hover{color:var(--bad)}
+.trow .nt{grid-column:1/-1;color:var(--faint)}
 </style>
 </head>
 <body>
+<div class="shell">
+<aside class="side" id="atrSide">
+<section class="panel">
+  <h2>ATR · <span class="mono" id="atrYear"></span></h2>
+  <div class="body atr-tot">
+    <label>年度 CFD<input id="atrCfdTot" inputmode="decimal" spellcheck="false"></label>
+    <label>年度風洞<input id="atrWtTot" inputmode="decimal" spellcheck="false"></label>
+    <div class="quota" id="atrQuota"></div>
+  </div>
+  <div class="body atr-form">
+    <div class="chips" id="atrPart"><button class="chip" data-v="Chassis">Chassis</button><button class="chip" data-v="Front Wing">Front Wing</button><button class="chip" data-v="Rear Wing">Rear Wing</button><button class="chip" data-v="Sidepods">Sidepods</button><button class="chip" data-v="Underfloor">Underfloor</button><button class="chip" data-v="Suspension">Suspension</button></div>
+    <div class="chips two" id="atrType"><button class="chip" data-v="Design" aria-pressed="true">Design</button><button class="chip" data-v="Research">Research</button></div>
+    <div class="hrs"><label>CFD</label><input id="atrCfd" inputmode="decimal" spellcheck="false"><button class="q" data-f="atrCfd" data-d="6">1/6</button><button class="q" data-f="atrCfd" data-d="12">1/12</button></div>
+    <div class="hrs"><label>風洞</label><input id="atrWt" inputmode="decimal" spellcheck="false"><button class="q" data-f="atrWt" data-d="6">1/6</button><button class="q" data-f="atrWt" data-d="12">1/12</button></div>
+    <input id="atrNote" class="note" placeholder="備註（選填）" spellcheck="false">
+    <p class="ferr" id="atrErr" hidden></p>
+  </div>
+  <div class="actions"><button class="primary" id="atrAdd">新增紀錄</button></div>
+  <div id="atrChart"></div>
+  <div id="atrList"></div>
+</section>
+<section class="panel" id="atrOldPanel" hidden>
+  <h2>往年 ATR</h2>
+  <div id="atrOld"></div>
+</section>
+</aside>
 <div class="wrap">
 
 <header>
   <h1>Setup Finder</h1>
   <span class="sub">F1 Manager 2024 · 1,012,095 組</span>
+  <label class="season">賽季<input type="number" id="season" min="2000" max="2099" class="mono"><button id="nextSeason" title="新增下一個賽季">＋</button></label>
   <span class="save" id="saveState"></span>
 </header>
 
@@ -256,15 +378,6 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
       <div class="actions"><button id="backToRec">回到建議值</button></div>
     </section>
 
-    <section class="panel">
-      <h2>出場圈數試算</h2>
-      <div class="body calc">
-        <div><label>剩餘時間（mm:ss，純數字＝分鐘）</label><input id="cT" value="30:00" spellcheck="false"></div>
-        <div><label>單圈（m:ss.s，純數字＝秒）</label><input id="cL" value="1:32.5" spellcheck="false"></div>
-        <div class="full"><label>出場圈＋進站的額外秒數</label><input id="cO" value="0" spellcheck="false"></div>
-      </div>
-      <div class="cres" id="cOut"></div>
-    </section>
   </div>
 
   <div>
@@ -325,6 +438,51 @@ textarea{width:100%;height:110px;background:var(--sunk);border:1px solid var(--l
   <input type="file" id="fileIn" accept="application/json,.json" hidden>
 </section>
 
+</div>
+<aside class="side" id="tyreSide">
+<section class="panel">
+  <h2>輪胎紀錄 · <span class="mono" id="tyHead"></span></h2>
+  <div class="body ty-form">
+    <div class="g2">
+      <label>氣溫 °C<input id="tyAir" inputmode="decimal" spellcheck="false"></label>
+      <label>賽道溫度 °C<input id="tyTrk" inputmode="decimal" spellcheck="false"></label>
+    </div>
+    <div class="chips four" id="tyWeather"><button class="chip" data-v="Clear skies">Clear skies</button><button class="chip" data-v="Partly cloudy">Partly cloudy</button><button class="chip" data-v="Cloudy">Cloudy</button><button class="chip" data-v="Rain">Rain</button></div>
+    <div class="g3">
+      <label>Track Grip<select id="tyGrip"><option>Very Low</option><option>Low</option><option selected>Normal</option><option>High</option><option>Very High</option></select></label>
+      <label>Track Rubber<select id="tyRubber"><option>Very Low</option><option>Low</option><option selected>Normal</option><option>High</option><option>Very High</option></select></label>
+      <label>積水（選填）<input id="tyWater" inputmode="decimal" spellcheck="false"></label>
+    </div>
+    <div class="chips five" id="tyComp"><button class="chip c-s" data-v="Soft">Soft</button><button class="chip c-m" data-v="Medium">Medium</button><button class="chip c-h" data-v="Hard">Hard</button><button class="chip c-i" data-v="Intermediate" title="Intermediate">Inter</button><button class="chip c-w" data-v="Wet">Wet</button></div>
+    <div class="chips five" id="tyMode"><button class="chip" data-v="Conserve">Conserve</button><button class="chip" data-v="Light">Light</button><button class="chip" data-v="Standard">Standard</button><button class="chip" data-v="Aggressive">Aggressive</button><button class="chip" data-v="Attack">Attack</button></div>
+    <div class="g3">
+      <label>起始耐久 %<input id="tyStart" value="100" inputmode="decimal" spellcheck="false"></label>
+      <label>圈數<input id="tyLaps" inputmode="numeric" spellcheck="false"></label>
+      <label>剩餘耐久 %<input id="tyEnd" inputmode="decimal" spellcheck="false"></label>
+    </div>
+    <div class="tylive" id="tyLive"></div>
+    <div class="tagrow">
+      <input id="tyTagIn" list="tyTagList" placeholder="標籤，Enter 加入（例：重油、塞車）" spellcheck="false"><datalist id="tyTagList"></datalist>
+      <div class="tags" id="tyTags"></div>
+    </div>
+    <label class="excl"><input type="checkbox" id="tyExcl">排除統計（極端狀況照樣保存，但不進平均）</label>
+    <input id="tyNote" class="note" placeholder="備註（選填）" spellcheck="false">
+    <p class="ferr" id="tyErr" hidden></p>
+  </div>
+  <div class="actions"><button class="primary" id="tyAdd">新增紀錄</button><span class="hint" style="padding:0">天氣與賽道狀況會保留到下一筆</span></div>
+  <div id="tyStats"></div>
+  <div id="tyList"></div>
+</section>
+<section class="panel">
+  <h2>出場圈數試算</h2>
+  <div class="body calc">
+    <div><label>剩餘時間（mm:ss，純數字＝分鐘）</label><input id="cT" value="30:00" spellcheck="false"></div>
+    <div><label>單圈（m:ss.s，純數字＝秒）</label><input id="cL" value="1:32.5" spellcheck="false"></div>
+    <div class="full"><label>出場圈＋進站的額外秒數</label><input id="cO" value="0" spellcheck="false"></div>
+  </div>
+  <div class="cres" id="cOut"></div>
+</section>
+</aside>
 </div>
 
 <script>
@@ -425,7 +583,40 @@ const LOG_MAX=400;
 function snapshot(){
   const priors={};
   TRACKS.forEach(t=>{ if(t.setups.length) priors[t.key]=t.setups; });
-  return {v:1, saved:new Date().toISOString(), order, priors, log};
+  return {v:2, saved:new Date().toISOString(), order, priors, log, season, atr, tyres, tyreTags};
+}
+// ---- ATR / 輪胎（v2 新增；v1 備份讀進來時這些欄位是空的） ----
+const ATR_PARTS=["Chassis","Front Wing","Rear Wing","Sidepods","Underfloor","Suspension"];
+const WEATHER=["Clear skies","Partly cloudy","Cloudy","Rain"];
+const LEVELS=["Very Low","Low","Normal","High","Very High"];
+const COMPOUNDS=["Soft","Medium","Hard","Intermediate","Wet"];
+const MODES=["Conserve","Light","Standard","Aggressive","Attack"];
+let season=2024;
+let atr={};            // { "2025": {cfd, wt, entries:[{id,t,part,type,cfd,wt,note}]} }
+let tyres=[];          // [{id,t,track,season,air,trk,weather,water,grip,rubber,comp,mode,start,laps,end,tags,excl,note}]
+let tyreTags=[];       // 自建標籤池
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const num=x=>{ if(x===null||x===undefined||x==="") return null; const n=+String(x).replace(",","."); return isFinite(n)?n:null; };
+function cleanAtr(o){
+  const out={};
+  if(!o||typeof o!=="object") return out;
+  for(const [y,v] of Object.entries(o)){
+    if(!/^\d{4}$/.test(y)||!v||typeof v!=="object") continue;
+    out[y]={cfd:num(v.cfd), wt:num(v.wt),
+      entries:(Array.isArray(v.entries)?v.entries:[]).filter(e=>e&&ATR_PARTS.includes(e.part))
+        .map(e=>({id:e.id||uid(), t:+e.t||0, part:e.part, type:e.type==="Research"?"Research":"Design",
+                  cfd:num(e.cfd)||0, wt:num(e.wt)||0, note:String(e.note||"")}))};
+  }
+  return out;
+}
+function cleanTyres(a){
+  return (Array.isArray(a)?a:[]).filter(r=>r&&byKey(r.track)&&COMPOUNDS.includes(r.comp)).map(r=>({
+    id:r.id||uid(), t:+r.t||0, track:r.track, season:+r.season||2024,
+    air:num(r.air), trk:num(r.trk), weather:WEATHER.includes(r.weather)?r.weather:null, water:num(r.water),
+    grip:LEVELS.includes(r.grip)?r.grip:null, rubber:LEVELS.includes(r.rubber)?r.rubber:null,
+    comp:r.comp, mode:MODES.includes(r.mode)?r.mode:null,
+    start:num(r.start)??100, laps:num(r.laps)||0, end:num(r.end),
+    tags:(Array.isArray(r.tags)?r.tags:[]).map(String).filter(Boolean), excl:!!r.excl, note:String(r.note||"")}));
 }
 function applySnapshot(o){
   if(!o||typeof o!=="object") throw new Error("格式不對");
@@ -444,6 +635,10 @@ function applySnapshot(o){
         .map(x=>x.map((v,i)=>Math.max(0,Math.min(SLIDERS[i].max,Math.round(+v||0)))));
     });
   }
+  if(num(o.season)) season=Math.round(num(o.season));
+  if(o.atr) atr=cleanAtr(o.atr);
+  if(o.tyres) tyres=cleanTyres(o.tyres);
+  if(Array.isArray(o.tyreTags)) tyreTags=o.tyreTags.map(String).filter(Boolean);
 }
 let saveMsg="";
 function save(){
@@ -457,7 +652,7 @@ function renderSaveState(){
   if(!storage.ok){ el.className="save off"; el.textContent="此環境不能用瀏覽器儲存 — 請用備份檔"; }
   else { el.className="save on"; el.textContent=saveMsg||"自動存檔已啟用"; }
   $("storeHint").textContent = storage.ok
-    ? "先驗資料和賽程會自動存進這個瀏覽器。換裝置、清快取或換網域都會消失，所以每季結束記得下載一次備份檔。"
+    ? "先驗、賽程、ATR 與輪胎紀錄都會自動存進這個瀏覽器，也都包含在備份檔裡。換裝置、清快取或換網域都會消失，所以每季結束記得下載一次備份檔。"
     : "這個環境不允許瀏覽器儲存，所有改動只存在這個分頁裡。請用「下載備份檔」保存。";
 }
 
@@ -998,6 +1193,7 @@ function renderTrack(){
     else { ap.disabled=false; ap.textContent = prev ? "改存這組（取代本場先前存的 "+setupStr(prev)+"）" : "把這組解加入本賽道"; }
   } else { ap.disabled=true; ap.textContent="把這組解加入本賽道"; }
   $("prevR").disabled=ri===0; $("nextR").disabled=ri===order.length-1;
+  renderTyres();
 }
 
 function fmtTime(ms){
@@ -1295,7 +1491,7 @@ $("fileIn").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return;
   const rd=new FileReader();
   rd.onload=()=>{
-    try{ applySnapshot(JSON.parse(rd.result)); save(); renderCal(); seedFromPrior(); recompute();
+    try{ applySnapshot(JSON.parse(rd.result)); save(); renderSides(); renderCal(); seedFromPrior(); recompute();
          $("io").value="已從 "+f.name+" 讀入。"; }
     catch(err){ $("io").value="讀取失敗："+err.message; }
   };
@@ -1303,7 +1499,7 @@ $("fileIn").addEventListener("change",e=>{
 });
 $("toText").addEventListener("click",()=>{ $("io").value=JSON.stringify(snapshot()); });
 $("fromText").addEventListener("click",()=>{
-  try{ applySnapshot(JSON.parse($("io").value)); save(); renderCal(); seedFromPrior(); recompute();
+  try{ applySnapshot(JSON.parse($("io").value)); save(); renderSides(); renderCal(); seedFromPrior(); recompute();
        $("io").value="匯入成功。"; }
   catch(err){ $("io").value="匯入失敗："+err.message; }
 });
@@ -1355,10 +1551,205 @@ function calcLaps(){
 ["cT","cL","cO"].forEach(id=>$(id).addEventListener("input",calcLaps));
 calcLaps();
 
+/* ================= 賽季 / ATR / 輪胎 ================= */
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtH=x=>{ if(x===null||x===undefined||!isFinite(x)) return "—"; return (Math.round(x*100)/100).toLocaleString("en-US",{maximumFractionDigits:2}); };
+// 兩段式刪除：第一下變「確定？」，3 秒內再按才執行
+let armKey=null, armTimer=null;
+function armed(key,rerender){
+  if(armKey===key){ clearTimeout(armTimer); armKey=null; return true; }
+  armKey=key; clearTimeout(armTimer);
+  armTimer=setTimeout(()=>{ armKey=null; rerender(); },3000);
+  rerender(); return false;
+}
+const delBtn=(cls,key,label="刪除")=>`<button class="${cls}${armKey===key?" armed":""}" data-k="${esc(key)}">${armKey===key?"確定？":label}</button>`;
+
+// chip 群組：單選
+function chipGroup(id,initial,onChange){
+  const el=$(id);
+  const set=v=>{ el.querySelectorAll(".chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v?"true":"false")); };
+  el.addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; set(b.dataset.v); onChange&&onChange(b.dataset.v); });
+  if(initial) set(initial);
+  return {get:()=>{ const b=el.querySelector('.chip[aria-pressed="true"]'); return b?b.dataset.v:null; }, set};
+}
+
+/* ---- 賽季 ---- */
+function seasonsInUse(){
+  const s=new Set(Object.keys(atr).map(Number)); tyres.forEach(r=>s.add(r.season)); s.add(season);
+  return [...s].sort((a,b)=>a-b);
+}
+function setSeason(y){
+  y=Math.round(num(y)); if(!y||y<2000||y>2099) { $("season").value=season; return; }
+  season=y; $("season").value=y; save(); renderAtr(); renderTyres();
+}
+$("season").addEventListener("change",e=>setSeason(e.target.value));
+$("nextSeason").addEventListener("click",()=>setSeason(Math.max(...seasonsInUse())+1));
+
+/* ---- ATR ---- */
+const atrY=(y=season)=>atr[y]||(atr[y]={cfd:null,wt:null,entries:[]});
+const atrPart=chipGroup("atrPart",null), atrType=chipGroup("atrType","Design");
+function atrUsed(Y){
+  const u={cfd:{Design:0,Research:0},wt:{Design:0,Research:0},parts:{}};
+  ATR_PARTS.forEach(p=>u.parts[p]={cfd:{Design:0,Research:0},wt:{Design:0,Research:0}});
+  Y.entries.forEach(e=>{ u.cfd[e.type]+=e.cfd; u.wt[e.type]+=e.wt; u.parts[e.part].cfd[e.type]+=e.cfd; u.parts[e.part].wt[e.type]+=e.wt; });
+  return u;
+}
+function atrBlock(Y,res,label){
+  const u=atrUsed(Y), tot=Y[res], used=u[res].Design+u[res].Research;
+  const scale=Math.max(tot||0,used)||1;
+  const w=x=>(x/scale*100).toFixed(2)+"%";
+  const left = tot!==null ? `剩 <b>${fmtH(tot-used)}</b> / ${fmtH(tot)}` : `已用 <b>${fmtH(used)}</b>（未填年度總量）`;
+  const pmax=Math.max(1e-9,...ATR_PARTS.map(p=>u.parts[p][res].Design+u.parts[p][res].Research));
+  return `<div class="abl"><div class="t"><span>${label}</span><span>${left}</span></div>
+    <div class="abar${tot!==null&&used>tot+1e-9?" over":""}"><i class="d" style="width:${w(u[res].Design)}"></i><i class="r" style="width:${w(u[res].Research)}"></i></div>
+    ${ATR_PARTS.map(p=>{ const d=u.parts[p][res].Design, r=u.parts[p][res].Research;
+      return `<div class="arow"><span>${p}</span><div class="abar"><i class="d" style="width:${(d/pmax*100).toFixed(2)}%"></i><i class="r" style="width:${(r/pmax*100).toFixed(2)}%"></i></div><span class="v">${fmtH(d+r)}</span></div>`; }).join("")}
+  </div>`;
+}
+function atrEntries(Y,y,editable){
+  if(!Y.entries.length) return `<p class="empty">${editable?"還沒有紀錄。":"沒有紀錄。"}</p>`;
+  return Y.entries.slice().reverse().map(e=>`<div class="erow2">
+      <span class="p">${e.part}</span><span class="k ${e.type==="Design"?"d":"r"}">${e.type}</span>
+      <span class="h">CFD ${fmtH(e.cfd)} · 風洞 ${fmtH(e.wt)}</span>
+      ${editable?delBtn("x","atr:"+y+":"+e.id):"<span></span>"}
+      ${e.note?`<span class="nt">${esc(e.note)}</span>`:""}
+    </div>`).join("");
+}
+function renderAtr(){
+  const Y=atrY();
+  $("atrYear").textContent=season;
+  if(document.activeElement!==$("atrCfdTot")) $("atrCfdTot").value=Y.cfd??"";
+  if(document.activeElement!==$("atrWtTot"))  $("atrWtTot").value=Y.wt??"";
+  $("atrQuota").textContent = (Y.cfd!==null||Y.wt!==null)
+    ? `每期 1/6：CFD ${fmtH(Y.cfd/6)} · 風洞 ${fmtH(Y.wt/6)}　半期 1/12：${fmtH(Y.cfd/12)} · ${fmtH(Y.wt/12)}`
+    : "填入年度總量後，下方 1/6、1/12 按鈕才會帶入數值";
+  document.querySelectorAll("#atrSide .q").forEach(b=>b.disabled=(b.dataset.f==="atrCfd"?Y.cfd:Y.wt)===null);
+  $("atrChart").innerHTML = atrBlock(Y,"cfd","CFD")+atrBlock(Y,"wt","風洞")
+    + `<div class="alg"><span><i style="background:var(--band)"></i>Design</span><span><i style="background:var(--optimal)"></i>Research</span></div>`;
+  $("atrList").innerHTML = atrEntries(Y,season,true);
+  const old=Object.keys(atr).map(Number).filter(y=>y!==season&&(atr[y].entries.length||atr[y].cfd!==null||atr[y].wt!==null)).sort((a,b)=>b-a);
+  $("atrOldPanel").hidden=!old.length;
+  $("atrOld").innerHTML = old.map(y=>{ const Y2=atr[y], u=atrUsed(Y2);
+    return `<details class="yr"><summary>${y} · CFD ${fmtH(u.cfd.Design+u.cfd.Research)}/${fmtH(Y2.cfd)} · 風洞 ${fmtH(u.wt.Design+u.wt.Research)}/${fmtH(Y2.wt)} · ${Y2.entries.length} 筆</summary>
+      ${atrBlock(Y2,"cfd","CFD")}${atrBlock(Y2,"wt","風洞")}${atrEntries(Y2,y,false)}
+      ${delBtn("ydel","atry:"+y,"刪除 "+y+" 整年的 ATR 紀錄")}</details>`; }).join("");
+}
+["atrCfdTot","atrWtTot"].forEach(id=>$(id).addEventListener("change",e=>{
+  atrY()[id==="atrCfdTot"?"cfd":"wt"]=num(e.target.value); save(); renderAtr();
+}));
+$("atrSide").addEventListener("click",e=>{
+  const q=e.target.closest(".q");
+  if(q){ const tot=atrY()[q.dataset.f==="atrCfd"?"cfd":"wt"]; if(tot!==null) $(q.dataset.f).value=fmtH(tot/+q.dataset.d).replace(/,/g,""); return; }
+  const x=e.target.closest("button[data-k]"); if(!x) return;
+  const k=x.dataset.k;
+  if(!armed(k,renderAtr)) return;
+  const [kind,y,id]=k.split(":");
+  if(kind==="atr"){ const Y=atr[y]; Y.entries=Y.entries.filter(en=>en.id!==id); }
+  else if(kind==="atry"){ delete atr[y]; }
+  save(); renderAtr();
+});
+$("atrAdd").addEventListener("click",()=>{
+  const err=$("atrErr"), part=atrPart.get(), cfd=num($("atrCfd").value), wt=num($("atrWt").value);
+  const msg = !part ? "先選部件。" : (cfd===null&&wt===null) ? "CFD 和風洞至少填一個。" : (cfd<0||wt<0) ? "時數不能是負的。" : "";
+  err.hidden=!msg; err.textContent=msg; if(msg) return;
+  atrY().entries.push({id:uid(), t:Date.now(), part, type:atrType.get()||"Design", cfd:cfd||0, wt:wt||0, note:$("atrNote").value.trim()});
+  $("atrCfd").value=""; $("atrWt").value=""; $("atrNote").value="";
+  save(); renderAtr();
+});
+
+/* ---- 輪胎 ---- */
+const tyWeather=chipGroup("tyWeather",null,()=>tyLive()), tyComp=chipGroup("tyComp",null,()=>tyLive()), tyMode=chipGroup("tyMode",null,()=>tyLive());
+let tyPendingTags=[];
+const perLap=r=>(r.end===null||!r.laps)?null:(r.start-r.end)/r.laps;
+function tyLive(){
+  const s=num($("tyStart").value)??100, l=num($("tyLaps").value), e=num($("tyEnd").value);
+  $("tyLive").innerHTML = (l&&e!==null) ? `${fmtH(s)}% → ${fmtH(e)}%，${l} 圈 ＝ 每圈 <b>${(((s-e)/l)).toFixed(2)}%</b>` : "";
+}
+["tyStart","tyLaps","tyEnd"].forEach(id=>$(id).addEventListener("input",tyLive));
+function renderTagInput(){
+  $("tyTags").innerHTML=tyPendingTags.map((t,i)=>`<span class="tag user">${esc(t)}<button data-ti="${i}" aria-label="移除">×</button></span>`).join("");
+  $("tyTagList").innerHTML=tyreTags.map(t=>`<option value="${esc(t)}">`).join("");
+}
+$("tyTagIn").addEventListener("keydown",e=>{
+  if(e.key!=="Enter") return; e.preventDefault();
+  const v=e.target.value.trim(); if(!v) return;
+  if(!tyPendingTags.includes(v)) tyPendingTags.push(v);
+  if(!tyreTags.includes(v)){ tyreTags.push(v); save(); }
+  e.target.value=""; renderTagInput();
+});
+$("tyTags").addEventListener("click",e=>{ const b=e.target.closest("button[data-ti]"); if(!b) return; tyPendingTags.splice(+b.dataset.ti,1); renderTagInput(); });
+let tyTarget=30;
+function renderTyres(){
+  const t=T(); if(!t) return;
+  $("tyHead").textContent=t.code+" · "+season;
+  const rows=tyres.filter(r=>r.track===t.key);
+  // 統計：同胎種 × 同駕駛模式，跨所有賽季；以總消耗 ÷ 總圈數加權
+  const groups=new Map(); let nEx=0;
+  rows.forEach(r=>{
+    const pl=perLap(r); if(pl===null) return;
+    if(r.excl){ nEx++; return; }
+    const k=r.comp+"|"+(r.mode||"—");
+    const g=groups.get(k)||{comp:r.comp,mode:r.mode||"—",n:0,laps:0,wear:0,tmin:Infinity,tmax:-Infinity,seasons:new Set()};
+    g.n++; g.laps+=r.laps; g.wear+=r.start-r.end; g.seasons.add(r.season);
+    if(r.trk!==null){ g.tmin=Math.min(g.tmin,r.trk); g.tmax=Math.max(g.tmax,r.trk); }
+    groups.set(k,g);
+  });
+  const G=[...groups.values()].sort((a,b)=>COMPOUNDS.indexOf(a.comp)-COMPOUNDS.indexOf(b.comp)||MODES.indexOf(a.mode)-MODES.indexOf(b.mode));
+  $("tyStats").innerHTML = G.length ? `<div class="tst">
+      <div class="hd">${t.code} 歷年平均（不分 FP）· 用到剩 <input id="tyTarget" value="${tyTarget}" inputmode="decimal">% 約幾圈</div>
+      <table><tr><th>胎種</th><th>模式</th><th>每圈</th><th>可跑</th><th>賽道溫度</th><th>筆數</th></tr>
+      ${G.map(g=>{ const a=g.wear/g.laps;
+        return `<tr><td>${g.comp}</td><td>${g.mode}</td><td><b>${a.toFixed(2)}%</b></td>
+          <td>${a>0?Math.floor((100-tyTarget)/a):"—"} 圈</td>
+          <td>${g.tmin===Infinity?"—":(g.tmin===g.tmax?fmtH(g.tmin):fmtH(g.tmin)+"–"+fmtH(g.tmax))+"°"}</td>
+          <td>${g.n}（${g.laps} 圈）</td></tr>`; }).join("")}
+      </table>${nEx?`<div class="ex">另有 ${nEx} 筆標記排除統計，未列入平均。</div>`:""}</div>` : "";
+  $("tyList").innerHTML = rows.length ? rows.slice().sort((a,b)=>b.season-a.season||b.t-a.t).map(r=>{
+      const pl=perLap(r);
+      const env=[r.weather, r.air!==null?"氣溫 "+fmtH(r.air)+"°":null, r.trk!==null?"賽道 "+fmtH(r.trk)+"°":null,
+                 r.grip?"Grip "+r.grip:null, r.rubber?"Rubber "+r.rubber:null, r.water!==null?"積水 "+fmtH(r.water):null].filter(Boolean).join(" · ");
+      return `<div class="trow${r.excl?" ex":""}">
+        <span class="a"><b>${r.comp}</b> ${r.mode||""} · ${fmtH(r.start)}→${r.end===null?"?":fmtH(r.end)}% / ${r.laps} 圈 · ${r.season}</span>
+        <span class="r"><span class="pl">${pl===null?"—":pl.toFixed(2)+"%"}</span>${delBtn("x","ty:"+r.id)}</span>
+        <span class="c">${esc(env)}${r.excl?" · 排除統計":""}</span>
+        ${r.tags.length?`<span class="tags">${r.tags.map(x=>`<span class="tag user">${esc(x)}</span>`).join("")}</span>`:""}
+        ${r.note?`<span class="nt">${esc(r.note)}</span>`:""}
+      </div>`; }).join("")
+    : `<p class="empty">這條賽道還沒有輪胎紀錄。</p>`;
+}
+$("tyStats").addEventListener("change",e=>{ if(e.target.id!=="tyTarget") return; const v=num(e.target.value); if(v!==null&&v>=0&&v<100) tyTarget=v; renderTyres(); });
+$("tyList").addEventListener("click",e=>{
+  const x=e.target.closest("button[data-k]"); if(!x) return;
+  if(!armed(x.dataset.k,renderTyres)) return;
+  const id=x.dataset.k.split(":")[1]; tyres=tyres.filter(r=>r.id!==id); save(); renderTyres();
+});
+$("tyAdd").addEventListener("click",()=>{
+  const err=$("tyErr");
+  const r={id:uid(), t:Date.now(), track:T().key, season,
+    air:num($("tyAir").value), trk:num($("tyTrk").value), weather:tyWeather.get(), water:num($("tyWater").value),
+    grip:$("tyGrip").value, rubber:$("tyRubber").value, comp:tyComp.get(), mode:tyMode.get(),
+    start:num($("tyStart").value)??100, laps:num($("tyLaps").value), end:num($("tyEnd").value),
+    tags:tyPendingTags.slice(), excl:$("tyExcl").checked, note:$("tyNote").value.trim()};
+  const wet=r.comp==="Intermediate"||r.comp==="Wet";
+  const msg = !r.comp ? "先選胎種。"
+    : (!r.laps||r.laps<=0||!Number.isInteger(r.laps)) ? "圈數要填正整數。"
+    : (!wet && r.end===null) ? "填剩餘耐久（雨胎可以不填）。"
+    : (r.end!==null && (r.end<0||r.end>r.start)) ? "剩餘耐久要介於 0 和起始耐久之間。"
+    : (r.start<=0||r.start>100) ? "起始耐久要介於 0–100。" : "";
+  err.hidden=!msg; err.textContent=msg; if(msg) return;
+  tyres.push(r);
+  // 環境（天氣、溫度、Grip、Rubber、胎種、模式）保留給下一筆；這一段的數字和標籤清掉
+  $("tyLaps").value=""; $("tyEnd").value=""; $("tyStart").value="100"; $("tyNote").value=""; $("tyExcl").checked=false;
+  tyPendingTags=[]; renderTagInput(); tyLive();
+  save(); renderTyres();
+});
+function renderSides(){ $("season").value=season; renderAtr(); renderTyres(); renderTagInput(); }
+
 /* ================= 啟動 ================= */
 buildStatic();
 try{ const saved=storage.read(); if(saved) applySnapshot(saved); }catch(e){}
 renderSaveState();
+renderSides();
 renderCal();
 seedFromPrior();
 recompute();
