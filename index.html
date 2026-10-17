@@ -119,6 +119,11 @@ header .save.off{color:var(--bad)}
 .fb{display:grid;grid-template-columns:84px 1fr;align-items:center;gap:12px;padding:7px 0}
 .fb + .fb{border-top:1px solid var(--line-soft)}
 .fb-name{font-size:13px;color:var(--dim)}
+.satin{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.satin input{width:64px;background:var(--sunk);border:1px solid var(--line);color:var(--text);font-family:var(--mono);font-size:13px;padding:5px 7px;text-align:right}
+.satin input:focus{outline:none;border-color:var(--band)}
+.satin > span{color:var(--faint);font-size:12px}
+.sat{font-family:var(--mono);font-size:11px;color:var(--mu);border:1px solid var(--line);padding:1px 5px}
 .opts{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
 button{font-family:inherit;font-size:13px;color:var(--text);background:transparent;border:1px solid var(--line);padding:6px 8px;cursor:pointer}
 button:hover{border-color:var(--band)}
@@ -250,7 +255,7 @@ header .season + .save{margin-left:10px}
 .atr-tot{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--line-soft)}
 .atr-tot .quota{grid-column:1/-1;font-size:11.5px;color:var(--faint);font-family:var(--mono)}
 .atr-form,.ty-form{display:flex;flex-direction:column;gap:9px}
-.hrs{display:grid;grid-template-columns:38px 1fr auto auto;gap:5px;align-items:center}
+.hrs{display:grid;grid-template-columns:38px 1fr auto auto auto;gap:4px;align-items:center}
 .hrs label{font-size:12px;color:var(--dim)}
 .hrs .q{font-family:var(--mono);font-size:11px;padding:4px 7px;color:var(--dim)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -286,6 +291,19 @@ header .season + .save{margin-left:10px}
 .erow2 .x:hover{color:var(--bad);border:none}
 .x.armed,.ydel.armed{color:#0c151d!important;background:var(--bad);font-weight:600}
 details.yr{border-top:1px solid var(--line-soft)}
+.pstrip{display:grid;gap:3px 3px;padding:10px 14px 8px;border-top:1px solid var(--line-soft);font-size:10.5px;align-items:center}
+.pstrip .ph{text-align:center;color:var(--faint);font-family:var(--mono)}
+.pstrip .pl{color:var(--dim);font-size:11px}
+.pstrip .pc{position:relative;height:20px;background:var(--sunk);border:1px solid var(--line-soft);overflow:hidden}
+.pstrip .pc .pf{position:absolute;inset:0 auto 0 0;background:var(--band);opacity:.35}
+.pstrip .pc span{position:relative;display:block;text-align:center;line-height:18px;font-family:var(--mono);color:var(--text)}
+.pstrip .pc.over{border-color:var(--bad)} .pstrip .pc.over .pf{background:var(--bad)}
+.pstrip .extra{color:var(--bad);border-color:var(--bad)}
+.phd{display:flex;justify-content:space-between;gap:8px;padding:8px 14px 4px;border-top:1px solid var(--line);font-size:11.5px;color:var(--band);flex-wrap:wrap}
+.phd span{color:var(--faint);font-family:var(--mono)}
+.phd.over,.phd.over span{color:var(--bad)}
+.npb{border:none;padding:0 8px 0 0;font-size:11px;color:var(--faint);text-decoration:underline dotted}
+.npb:hover{border:none;color:var(--text)} .npb.on{color:var(--rec)}
 details.yr summary{padding:9px 14px;cursor:pointer;font-size:12.5px;color:var(--dim);font-family:var(--mono)}
 details.yr .ydel{margin:6px 14px 12px;font-size:11.5px;padding:3px 8px;color:var(--faint)}
 /* 輪胎統計 */
@@ -315,16 +333,17 @@ details.yr .ydel{margin:6px 14px 12px;font-size:11.5px;padding:3px 8px;color:var
 <section class="panel">
   <h2>ATR · <span class="mono" id="atrYear"></span></h2>
   <div class="body atr-tot">
-    <label>年度 CFD<input id="atrCfdTot" inputmode="decimal" spellcheck="false"></label>
-    <label>年度風洞<input id="atrWtTot" inputmode="decimal" spellcheck="false"></label>
+    <label>單期 CFD（MAUh）<input id="atrCfdTot" inputmode="decimal" spellcheck="false"></label>
+    <label>單期風洞（小時）<input id="atrWtTot" inputmode="decimal" spellcheck="false"></label>
     <div class="quota" id="atrQuota"></div>
   </div>
   <div class="body atr-form">
     <div class="chips" id="atrPart"><button class="chip" data-v="Chassis">Chassis</button><button class="chip" data-v="Front Wing">Front Wing</button><button class="chip" data-v="Rear Wing">Rear Wing</button><button class="chip" data-v="Sidepods">Sidepods</button><button class="chip" data-v="Underfloor">Underfloor</button><button class="chip" data-v="Suspension">Suspension</button></div>
     <div class="chips two" id="atrType"><button class="chip" data-v="Design" aria-pressed="true">Design</button><button class="chip" data-v="Research">Research</button></div>
-    <div class="hrs"><label>CFD</label><input id="atrCfd" inputmode="decimal" spellcheck="false"><button class="q" data-f="atrCfd" data-d="6">1/6</button><button class="q" data-f="atrCfd" data-d="12">1/12</button></div>
-    <div class="hrs"><label>風洞</label><input id="atrWt" inputmode="decimal" spellcheck="false"><button class="q" data-f="atrWt" data-d="6">1/6</button><button class="q" data-f="atrWt" data-d="12">1/12</button></div>
+    <div class="hrs"><label>CFD</label><input id="atrCfd" inputmode="decimal" spellcheck="false"><button class="q" data-f="atrCfd" data-d="1" title="整期額度">整期</button><button class="q" data-f="atrCfd" data-d="2" title="半期額度">半期</button><button class="q" data-f="atrCfd" data-d="rem" title="目前這一期還剩多少">剩餘</button></div>
+    <div class="hrs"><label>風洞</label><input id="atrWt" inputmode="decimal" spellcheck="false"><button class="q" data-f="atrWt" data-d="1" title="整期額度">整期</button><button class="q" data-f="atrWt" data-d="2" title="半期額度">半期</button><button class="q" data-f="atrWt" data-d="rem" title="目前這一期還剩多少">剩餘</button></div>
     <input id="atrNote" class="note" placeholder="備註（選填）" spellcheck="false">
+    <div class="tylive" id="atrNext"></div>
     <p class="ferr" id="atrErr" hidden></p>
   </div>
   <div class="actions"><button class="primary" id="atrAdd">新增紀錄</button></div>
@@ -393,7 +412,10 @@ details.yr .ydel{margin:6px 14px 12px;font-size:11.5px;padding:3px 8px;color:var
 
     <section class="panel">
       <h2>車手回饋</h2>
-      <div class="body"><div class="fbfor" id="fbFor"></div><div id="feedback"></div></div>
+      <div class="body"><div class="fbfor" id="fbFor"></div><div id="feedback"></div>
+        <div class="fb satrow"><div class="fb-name">車手滿意度</div>
+          <div class="satin"><input id="satIn" inputmode="decimal" spellcheck="false" placeholder="—"><span>%</span>
+          <span class="hint" style="padding:0">選填。跟這一輪的設置一起記下，之後用來分析滿意度和離真解多遠的關係</span></div></div></div>
       <div class="actions">
         <button class="primary" id="record">記錄回饋，給下一組</button>
         <button id="clearFb">清空選擇</button>
@@ -528,30 +550,30 @@ const CENTER=[10,7,4,8,10];
 
 // 賽道母表。setups 是各賽道歷史最終設置（滑桿 index）。
 const TRACKS=[
-  {code:'BHR', key:'bahrain',      name:'Bahrain GP',              circuit:'Sakhir',        setups:[[10,5,3,11,6],[9,5,3,13,8],[10,5,3,11,6],[8,4,3,13,7],[9,4,4,16,15],[10,5,3,10,3]]},
-  {code:'JED', key:'saudi',        name:'Saudi Arabian GP',        circuit:'Jeddah',        setups:[[13,5,0,16,0],[16,4,1,16,0],[13,5,0,16,0],[16,4,1,16,0],[14,4,0,16,0],[14,4,0,16,0],[15,4,1,16,0],[13,5,0,16,0]]},
-  {code:'AUS', key:'australian',   name:'Australian GP',           circuit:'Albert Park',   setups:[[17,8,2,8,13],[16,8,2,7,8],[16,8,3,13,19],[16,8,2,7,8],[15,8,1,5,4],[16,8,1,3,2]]},
-  {code:'SUZ', key:'suzuka',       name:'Japanese GP',             circuit:'Suzuka',        setups:[[14,7,5,16,0],[15,7,5,16,0],[15,9,3,13,0],[15,9,3,13,0],[14,8,4,16,0],[14,9,3,16,0],[14,8,4,15,0],[17,7,6,16,1]]},
-  {code:'SHA', key:'chinese',      name:'Chinese GP',              circuit:'Shanghai',      setups:[[4,5,7,5,18],[8,4,8,0,19],[4,5,6,0,8],[4,6,5,0,6],[2,6,5,0,5],[4,5,6,1,11],[8,4,8,0,20],[5,5,7,3,16]]},
-  {code:'MIA', key:'miami',        name:'Miami GP',                circuit:'Miami',         setups:[[15,8,7,15,8],[16,8,8,16,10],[14,9,5,14,0],[13,9,5,15,0],[13,9,5,15,0],[14,9,6,16,4]]},
-  {code:'IMO', key:'imola',        name:'Emilia Romagna GP',       circuit:'Imola',         setups:[[14,7,6,15,1],[12,8,3,16,0],[13,7,5,16,1],[12,8,3,15,0],[13,8,4,16,0],[13,8,4,16,0],[14,8,5,16,0],[16,7,5,14,0]]},
-  {code:'MON', key:'monaco',       name:'Monaco GP',               circuit:'Monte Carlo',   setups:[[20,14,2,16,20],[20,14,1,12,13],[20,14,2,16,20],[20,14,0,9,5],[20,14,1,15,20],[20,14,0,8,5],[20,14,2,16,20],[20,14,1,14,16]]},
-  {code:'MTL', key:'montreal',     name:'Canadian GP',             circuit:'Montreal',      setups:[[6,5,7,12,20],[6,5,7,12,19],[6,6,6,9,14],[9,5,8,9,20],[5,6,5,7,9],[6,6,6,9,13],[8,6,7,9,14],[9,5,8,9,20]]},
-  {code:'CAT', key:'catalunya',    name:'Spanish GP',              circuit:'Catalunya',     setups:[[16,11,1,10,12],[15,11,0,5,3],[17,11,0,2,0],[15,11,0,7,6],[18,11,1,8,12],[17,10,3,16,20]]},
-  {code:'RBR', key:'spielberg',    name:'Austrian GP',             circuit:'Spielberg',     setups:[[9,8,8,11,20],[10,9,8,11,18],[10,8,8,9,20],[9,8,8,10,20],[10,8,8,10,16],[10,9,7,4,1],[8,8,8,12,16],[10,9,8,11,19]]},
-  {code:'SIL', key:'silverstone',  name:'British GP',              circuit:'Silverstone',   setups:[[11,5,0,10,2],[11,5,1,15,13],[12,5,0,9,4],[12,5,0,8,1],[11,5,0,13,11],[12,5,0,10,6],[12,5,0,8,0],[12,5,0,8,0]]},
-  {code:'HUN', key:'hungaroring',  name:'Hungarian GP',            circuit:'Hungaroring',   setups:[[18,12,8,14,20],[20,12,7,5,8],[18,12,7,11,17],[18,11,8,11,20],[20,12,6,2,3],[19,12,7,6,7],[19,12,6,3,4],[18,12,8,14,20]]},
-  {code:'SPA', key:'belgian',      name:'Belgian GP',              circuit:'Spa',           setups:[[4,1,5,14,9],[5,2,5,14,12],[5,2,4,11,3],[6,2,4,10,4],[6,2,4,10,5],[5,1,5,15,13],[6,1,6,16,17],[5,1,5,15,15]]},
-  {code:'ZAN', key:'zandvoort',    name:'Dutch GP',                circuit:'Zandvoort',     setups:[[19,9,4,14,20],[19,9,3,11,18],[19,10,1,3,2],[19,9,2,7,11],[19,9,2,6,9],[20,9,4,11,20]]},
-  {code:'MNZ', key:'monza',        name:'Italian GP',              circuit:'Monza',         setups:[[2,0,7,5,15],[3,0,7,1,10],[1,0,7,5,13],[4,0,8,5,18],[5,0,8,4,18],[2,0,7,4,13]]},
-  {code:'BAK', key:'baku',         name:'Azerbaijan GP',           circuit:'Baku',          setups:[[4,3,7,6,19],[3,2,7,6,20],[4,3,6,3,14],[4,2,7,5,20],[3,2,7,7,20],[3,2,7,7,20],[3,2,7,6,20],[4,3,6,3,14]]},
-  {code:'SIN', key:'singapore',    name:'Singapore GP',            circuit:'Marina Bay',    setups:[[13,13,0,1,18],[15,13,1,1,19],[17,12,4,7,20],[13,13,0,0,15],[14,13,0,0,17],[16,12,3,5,20]]},
-  {code:'USA', key:'austin',       name:'United States GP',        circuit:'Austin',        setups:[[17,8,8,16,10],[16,7,8,16,14],[17,8,8,16,10],[16,8,7,14,1],[17,8,7,13,3],[16,8,7,15,3]]},
-  {code:'MEX', key:'mexico',       name:'Mexico City GP',          circuit:'Mexico City',   setups:[[13,8,7,15,6],[13,8,7,15,6],[12,9,6,15,0],[14,7,8,15,13],[12,9,6,15,1]]},
-  {code:'INT', key:'interlagos',   name:'Sao Paulo GP',            circuit:'Interlagos',    setups:[[15,8,7,11,9],[14,8,7,14,11],[15,7,8,16,16],[12,7,7,15,11],[12,8,5,9,1],[14,7,8,14,13]]},
-  {code:'LAS', key:'lasvegas',     name:'Las Vegas GP',            circuit:'Las Vegas',     setups:[[0,3,8,8,14],[0,3,8,11,20],[0,4,7,2,2],[1,2,8,6,16],[0,4,7,2,1],[0,3,8,7,11],[2,3,8,4,11],[2,3,8,8,19]]},
-  {code:'QAT', key:'losail',       name:'Qatar GP',                circuit:'Lusail',        setups:[[15,8,1,10,9],[16,8,2,14,18],[16,8,2,13,16],[16,8,1,9,11],[18,8,3,15,20],[16,8,1,8,9]]},
-  {code:'YAS', key:'abudhabi',     name:'Abu Dhabi GP',            circuit:'Yas Marina',    setups:[[10,8,4,7,9],[10,7,6,12,20],[11,7,7,13,20],[9,8,3,6,5],[9,7,6,15,20],[8,8,3,6,5]]},
+  {code:'BHR', key:'bahrain',      name:'Bahrain GP',              circuit:'Sakhir',        setups:[[10,5,3,11,6],[9,5,3,13,8],[10,5,3,11,6],[8,4,3,13,7],[9,4,4,16,15],[10,5,3,10,3],[8,5,2,9,0],[8,4,4,16,12]]},
+  {code:'JED', key:'saudi',        name:'Saudi Arabian GP',        circuit:'Jeddah',        setups:[[13,5,0,16,0],[16,4,1,16,0],[13,5,0,16,0],[16,4,1,16,0],[14,4,0,16,0],[14,4,0,16,0],[15,4,1,16,0],[13,5,0,16,0],[13,5,0,16,0],[16,4,1,16,0]]},
+  {code:'AUS', key:'australian',   name:'Australian GP',           circuit:'Albert Park',   setups:[[17,8,2,8,13],[16,8,2,7,8],[16,8,3,13,19],[16,8,2,7,8],[15,8,1,5,4],[16,8,1,3,2],[16,8,2,9,13],[17,8,2,7,11]]},
+  {code:'SUZ', key:'suzuka',       name:'Japanese GP',             circuit:'Suzuka',        setups:[[14,7,5,16,0],[15,7,5,16,0],[15,9,3,13,0],[15,9,3,13,0],[14,8,4,16,0],[14,9,3,16,0],[14,8,4,15,0],[17,7,6,16,1],[16,7,5,15,0],[14,9,3,16,0]]},
+  {code:'SHA', key:'chinese',      name:'Chinese GP',              circuit:'Shanghai',      setups:[[4,5,7,5,18],[8,4,8,0,19],[4,5,6,0,8],[4,6,5,0,6],[2,6,5,0,5],[4,5,6,1,11],[8,4,8,0,20],[5,5,7,3,16],[5,4,8,6,20],[6,5,8,5,20]]},
+  {code:'MIA', key:'miami',        name:'Miami GP',                circuit:'Miami',         setups:[[15,8,7,15,8],[16,8,8,16,10],[14,9,5,14,0],[13,9,5,15,0],[13,9,5,15,0],[14,9,6,16,4],[14,9,5,13,0],[14,9,6,16,3]]},
+  {code:'IMO', key:'imola',        name:'Emilia Romagna GP',       circuit:'Imola',         setups:[[14,7,6,15,1],[12,8,3,16,0],[13,7,5,16,1],[12,8,3,15,0],[13,8,4,16,0],[13,8,4,16,0],[14,8,5,16,0],[16,7,5,14,0],[13,8,4,16,0]]},
+  {code:'MON', key:'monaco',       name:'Monaco GP',               circuit:'Monte Carlo',   setups:[[20,14,2,16,20],[20,14,1,12,13],[20,14,2,16,20],[20,14,0,9,5],[20,14,1,15,20],[20,14,0,8,5],[20,14,2,16,20],[20,14,1,14,16],[20,14,2,16,20],[20,14,1,15,20]]},
+  {code:'MTL', key:'montreal',     name:'Canadian GP',             circuit:'Montreal',      setups:[[6,5,7,12,20],[6,5,7,12,19],[6,6,6,9,14],[9,5,8,9,20],[5,6,5,7,9],[6,6,6,9,13],[8,6,7,9,14],[9,5,8,9,20],[8,5,8,11,20],[6,5,7,12,19]]},
+  {code:'CAT', key:'catalunya',    name:'Spanish GP',              circuit:'Catalunya',     setups:[[16,11,1,10,12],[15,11,0,5,3],[17,11,0,2,0],[15,11,0,7,6],[18,11,1,8,12],[17,10,3,16,20],[18,10,3,15,20],[20,10,3,11,20]]},
+  {code:'RBR', key:'spielberg',    name:'Austrian GP',             circuit:'Spielberg',     setups:[[9,8,8,11,20],[10,9,8,11,18],[10,8,8,9,20],[9,8,8,10,20],[10,8,8,10,16],[10,9,7,4,1],[8,8,8,12,16],[10,9,8,11,19],[10,9,7,5,6],[9,8,8,11,20]]},
+  {code:'SIL', key:'silverstone',  name:'British GP',              circuit:'Silverstone',   setups:[[11,5,0,10,2],[11,5,1,15,13],[12,5,0,9,4],[12,5,0,8,1],[11,5,0,13,11],[12,5,0,10,6],[12,5,0,8,0],[12,5,0,8,0],[12,5,1,14,13],[13,5,0,8,3]]},
+  {code:'HUN', key:'hungaroring',  name:'Hungarian GP',            circuit:'Hungaroring',   setups:[[18,12,8,14,20],[20,12,7,5,8],[18,12,7,11,17],[18,11,8,11,20],[20,12,6,2,3],[19,12,7,6,7],[19,12,6,3,4],[18,12,8,14,20],[20,12,7,5,7],[18,11,8,10,20]]},
+  {code:'SPA', key:'belgian',      name:'Belgian GP',              circuit:'Spa',           setups:[[4,1,5,14,9],[5,2,5,14,12],[5,2,4,11,3],[6,2,4,10,4],[6,2,4,10,5],[5,1,5,15,13],[6,1,6,16,17],[5,1,5,15,15],[5,1,5,14,10],[5,1,5,15,14]]},
+  {code:'ZAN', key:'zandvoort',    name:'Dutch GP',                circuit:'Zandvoort',     setups:[[19,9,4,14,20],[19,9,3,11,18],[19,10,1,3,2],[19,9,2,7,11],[19,9,2,6,9],[20,9,4,11,20],[20,10,1,3,3],[19,8,5,14,20]]},
+  {code:'MNZ', key:'monza',        name:'Italian GP',              circuit:'Monza',         setups:[[2,0,7,5,15],[3,0,7,1,10],[1,0,7,5,13],[4,0,8,5,18],[5,0,8,4,18],[2,0,7,4,13],[4,0,8,6,19],[3,0,8,7,20]]},
+  {code:'BAK', key:'baku',         name:'Azerbaijan GP',           circuit:'Baku',          setups:[[4,3,7,6,19],[3,2,7,6,20],[4,3,6,3,14],[4,2,7,5,20],[3,2,7,7,20],[3,2,7,7,20],[3,2,7,6,20],[4,3,6,3,14],[4,2,7,5,20],[3,3,6,5,16]]},
+  {code:'SIN', key:'singapore',    name:'Singapore GP',            circuit:'Marina Bay',    setups:[[13,13,0,1,18],[15,13,1,1,19],[17,12,4,7,20],[13,13,0,0,15],[14,13,0,0,17],[16,12,3,5,20],[13,13,0,1,17],[15,13,1,1,20]]},
+  {code:'USA', key:'austin',       name:'United States GP',        circuit:'Austin',        setups:[[17,8,8,16,10],[16,7,8,16,14],[17,8,8,16,10],[16,8,7,14,1],[17,8,7,13,3],[16,8,7,15,3],[17,8,7,13,2],[16,8,7,14,1]]},
+  {code:'MEX', key:'mexico',       name:'Mexico City GP',          circuit:'Mexico City',   setups:[[13,8,7,15,6],[13,8,7,15,6],[12,9,6,15,0],[14,7,8,15,13],[12,9,6,15,1],[14,7,8,16,14],[14,8,8,16,9]]},
+  {code:'INT', key:'interlagos',   name:'Sao Paulo GP',            circuit:'Interlagos',    setups:[[15,8,7,11,9],[14,8,7,14,11],[15,7,8,16,16],[12,7,7,15,11],[12,8,5,9,1],[14,7,8,14,13],[13,8,5,8,0],[14,7,8,16,15]]},
+  {code:'LAS', key:'lasvegas',     name:'Las Vegas GP',            circuit:'Las Vegas',     setups:[[0,3,8,8,14],[0,3,8,11,20],[0,4,7,2,2],[1,2,8,6,16],[0,4,7,2,1],[0,3,8,7,11],[2,3,8,4,11],[2,3,8,8,19],[1,3,8,5,10],[0,3,8,8,14]]},
+  {code:'QAT', key:'losail',       name:'Qatar GP',                circuit:'Lusail',        setups:[[15,8,1,10,9],[16,8,2,14,18],[16,8,2,13,16],[16,8,1,9,11],[18,8,3,15,20],[16,8,1,8,9],[14,8,1,12,12],[18,8,3,15,20]]},
+  {code:'YAS', key:'abudhabi',     name:'Abu Dhabi GP',            circuit:'Yas Marina',    setups:[[10,8,4,7,9],[10,7,6,12,20],[11,7,7,13,20],[9,8,3,6,5],[9,7,6,15,20],[8,8,3,6,5],[9,8,3,5,5],[9,7,5,11,16]]},
 ];
 const SEASON_ORDER=['bahrain','saudi','australian','suzuka','chinese','miami','imola','monaco','montreal','catalunya','spielberg','silverstone','hungaroring','belgian','zandvoort','monza','baku','singapore','austin','mexico','interlagos','lasvegas','losail','abudhabi'];  // 2024 原始賽曆
 let order=SEASON_ORDER.slice();            // 本季賽程，可自訂
@@ -602,10 +624,14 @@ function cleanAtr(o){
   if(!o||typeof o!=="object") return out;
   for(const [y,v] of Object.entries(o)){
     if(!/^\d{4}$/.test(y)||!v||typeof v!=="object") continue;
-    out[y]={cfd:num(v.cfd), wt:num(v.wt),
+    // 額度改存「單期」(pcfd/pwt)。舊版存的是年度總量 (cfd/wt)，讀進來時除以 6 換算
+    const old=v.pcfd===undefined&&v.pwt===undefined;
+    const pc=old?(num(v.cfd)===null?null:num(v.cfd)/6):num(v.pcfd);
+    const pw=old?(num(v.wt)===null?null:num(v.wt)/6):num(v.pwt);
+    out[y]={pcfd:pc, pwt:pw,
       entries:(Array.isArray(v.entries)?v.entries:[]).filter(e=>e&&ATR_PARTS.includes(e.part))
         .map(e=>({id:e.id||uid(), t:+e.t||0, part:e.part, type:e.type==="Research"?"Research":"Design",
-                  cfd:num(e.cfd)||0, wt:num(e.wt)||0, note:String(e.note||"")}))};
+                  cfd:num(e.cfd)||0, wt:num(e.wt)||0, note:String(e.note||""), np:!!e.np}))};
   }
   return out;
 }
@@ -626,7 +652,8 @@ function applySnapshot(o){
   }
   if(Array.isArray(o.log)) log=o.log.filter(e=>e&&Array.isArray(e.setup)&&e.setup.length===5
       &&Array.isArray(e.ratings)&&e.ratings.length===5)
-    .map(e=>({...e, n:typeof e.n==="number"?e.n:0, solved:Array.isArray(e.solved)?e.solved:null}))
+    .map(e=>({...e, n:typeof e.n==="number"?e.n:0, solved:Array.isArray(e.solved)?e.solved:null,
+              sat:(typeof e.sat==="number"&&e.sat>=0&&e.sat<=100)?e.sat:null}))
     .slice(-LOG_MAX);
   if(o.priors&&typeof o.priors==="object"){
     TRACKS.forEach(t=>{
@@ -775,7 +802,7 @@ function segments(bins,dim,n){
 /* ================= 狀態 ================= */
 // sprint / sprintReleased 是逐車的：兩台車各自收斂、各自解除，互不干擾
 const newSid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-function newCar(){return {sid:newSid(),setup:CENTER.slice(),pending:[null,null,null,null,null],history:[],result:null,
+function newCar(){return {sid:newSid(),setup:CENTER.slice(),pending:[null,null,null,null,null],psat:null,history:[],result:null,
   sprint:false,sprintReleased:false};}
 let cars=[newCar(),newCar()];
 let active=0, ri=0, usePrior=true, busy=false;
@@ -1086,7 +1113,8 @@ function renderPending(){
     const sel=C().pending[dim]===null?-1:C().pending[dim];
     b.setAttribute("aria-pressed", sel===r?"true":"false");
   });
-  $("record").disabled=C().pending.every(p=>p===null);
+  if(document.activeElement!==$("satIn")) $("satIn").value=C().psat??"";
+  $("record").disabled=C().pending.every(p=>p===null)&&C().psat===null;
 }
 function renderDims(){
   const res=C().result, cur=values(C().setup), mu=MU();
@@ -1161,7 +1189,7 @@ function renderHistory(){
     <div class="hrow">
       <span class="no">${idx+1}</span>
       <span class="setup">${h.setup.map((x,i)=>SLIDERS[i].k+x).join(" ")}</span>
-      <span class="tags">${h.ratings.map((r,i)=>r===null?"":`<span class="tag" data-r="${r}">${DIMS[i].name.slice(0,4)} ${RATINGS[r].label}</span>`).join("")}</span>
+      <span class="tags">${h.ratings.map((r,i)=>r===null?"":`<span class="tag" data-r="${r}">${DIMS[i].name.slice(0,4)} ${RATINGS[r].label}</span>`).join("")}${h.sat!=null?`<span class="sat">滿意 ${fmtH(h.sat)}%</span>`:""}</span>
       <button class="del" data-idx="${idx}">刪除</button>
     </div>`).join("");
   el.querySelectorAll(".del").forEach(b=>b.addEventListener("click",()=>{
@@ -1232,6 +1260,7 @@ function renderLog(){
           <span class="cr">Car ${e.car+1}</span>
           <span class="st">${setupStr(e.setup)}</span>
           <span class="tags">${e.ratings.map((r,i)=>r===null?"":`<span class="tag" data-r="${r}">${DIMS[i].name.slice(0,4)}</span>`).join("")}</span>
+          ${e.sat!=null?`<span class="sat">${fmtH(e.sat)}%</span>`:""}
           <span class="nn">${e.solved?"已鎖定":"剩 "+e.n.toLocaleString("en-US")}</span>
         </div>`; }).join("")
     : `<p class="empty">還沒有任何回合。每按一次「記錄回饋」就會留下一筆，換賽道也不會清掉。</p>`;
@@ -1380,30 +1409,36 @@ $("usePrior").addEventListener("change",e=>{ usePrior=e.target.checked; seedFrom
 }));
 $("record").addEventListener("click",()=>{
   // 計算中連點會把同一輪記兩次（第二次是全空的回饋）
-  if(busy||C().pending.every(p=>p===null)) return;
-  const before=C().result?C().result.n:0;
-  C().history.push({setup:C().setup.slice(),ratings:C().pending.slice()});
-  C().pending=[null,null,null,null,null];
+  if(busy||(C().pending.every(p=>p===null)&&C().psat===null)) return;
+  const before=C().result?C().result.n:0, gotRatings=C().pending.some(p=>p!==null);
+  C().history.push({setup:C().setup.slice(),ratings:C().pending.slice(),sat:C().psat});
+  C().pending=[null,null,null,null,null]; C().psat=null;
   busy=true; renderStatus();
   requestAnimationFrame(()=>{
     const res=solve(constraintsOf(C()),PRI());
     C().result=res; attachSprint();
     const rec=C().history[C().history.length-1];
     pushLog({t:Date.now(), sid:C().sid, track:order[ri], car:active, setup:rec.setup.slice(),
-             ratings:rec.ratings.slice(), n:res.n, solved:res.n===1?res.best.slice():null});
+             ratings:rec.ratings.slice(), sat:rec.sat??null, n:res.n, solved:res.n===1?res.best.slice():null});
     if(res.n>0) C().setup=recommended();         // 直接套用下一組建議
     busy=false; render();
     const w=$("fbWarn");
     if(res.n===0){
       w.textContent="這筆回饋和之前的紀錄無法同時成立。下面的診斷會指出是哪一輪、以及當時實際可能跑的設置。";
       w.hidden=false;
-    }else if(before===res.n&&before>1){
+    }else if(gotRatings&&before===res.n&&before>1){
       w.textContent="可能解沒有減少：這組設置在五個維度上和先前等價。手動把滑桿拉開一點再跑一輪。";
       w.hidden=false;
     }else w.hidden=true;
   });
 });
-$("clearFb").addEventListener("click",()=>{ C().pending=[null,null,null,null,null]; renderPending(); $("fbWarn").hidden=true; });
+$("clearFb").addEventListener("click",()=>{ C().pending=[null,null,null,null,null]; C().psat=null; renderPending(); $("fbWarn").hidden=true; });
+$("satIn").addEventListener("input",e=>{
+  const v=num(e.target.value);
+  C().psat = v===null||v<0||v>100 ? null : v;
+  e.target.style.borderColor = e.target.value.trim()&&C().psat===null ? "var(--bad)" : "";
+  $("record").disabled=C().pending.every(p=>p===null)&&C().psat===null;
+});
 $("backToRec").addEventListener("click",()=>{
   const res=C().result; if(!res||res.n<1) return;
   C().setup=recommended(); renderSliders(); renderDims(); renderFbFor();
@@ -1586,8 +1621,30 @@ $("season").addEventListener("change",e=>setSeason(e.target.value));
 $("nextSeason").addEventListener("click",()=>setSeason(Math.max(...seasonsInUse())+1));
 
 /* ---- ATR ---- */
-const atrY=(y=season)=>atr[y]||(atr[y]={cfd:null,wt:null,entries:[]});
+// 額度以「單期」輸入（一年 6 期，沒用完不滾存）。紀錄依輸入順序自動分期：
+// 這一期放得下就留在這一期，放不下就開下一期。某一期沒用滿就換期時，可以在那一筆按「從這筆開新一期」。
+const ATR_EPS=1e-6, ATR_N=6;
+const atrY=(y=season)=>atr[y]||(atr[y]={pcfd:null,pwt:null,entries:[]});
 const atrPart=chipGroup("atrPart",null), atrType=chipGroup("atrType","Design");
+function atrPeriods(Y,extra){
+  const list=extra?Y.entries.concat([extra]):Y.entries;
+  const out=[]; let cur=null;
+  const fits=(c,w)=>(Y.pcfd===null||cur.c+c<=Y.pcfd+ATR_EPS)&&(Y.pwt===null||cur.w+w<=Y.pwt+ATR_EPS);
+  for(const e of list){
+    const empty=!cur||(cur.c<=ATR_EPS&&cur.w<=ATR_EPS);
+    if(!cur || (!empty && (e.np || !fits(e.cfd,e.wt)))){ cur={n:out.length+1,c:0,w:0,entries:[]}; out.push(cur); }
+    cur.entries.push(e); cur.c+=e.cfd; cur.w+=e.wt;
+  }
+  out.forEach(P=>P.over=(Y.pcfd!==null&&P.c>Y.pcfd+ATR_EPS)||(Y.pwt!==null&&P.w>Y.pwt+ATR_EPS));
+  return out;
+}
+// 目前這一期還剩多少（最後一期已滿就是下一期的完整額度）
+function atrOpen(Y){
+  const P=atrPeriods(Y), last=P[P.length-1];
+  const full=!last||((Y.pcfd===null||last.c>=Y.pcfd-ATR_EPS)&&(Y.pwt===null||last.w>=Y.pwt-ATR_EPS));
+  if(full) return {n:(last?last.n:0)+1, c:Y.pcfd, w:Y.pwt};
+  return {n:last.n, c:Y.pcfd===null?null:Y.pcfd-last.c, w:Y.pwt===null?null:Y.pwt-last.w};
+}
 function atrUsed(Y){
   const u={cfd:{Design:0,Research:0},wt:{Design:0,Research:0},parts:{}};
   ATR_PARTS.forEach(p=>u.parts[p]={cfd:{Design:0,Research:0},wt:{Design:0,Research:0}});
@@ -1595,51 +1652,93 @@ function atrUsed(Y){
   return u;
 }
 function atrBlock(Y,res,label){
-  const u=atrUsed(Y), tot=Y[res], used=u[res].Design+u[res].Research;
+  const u=atrUsed(Y), q=Y[res==="cfd"?"pcfd":"pwt"], tot=q===null?null:q*ATR_N, used=u[res].Design+u[res].Research;
   const scale=Math.max(tot||0,used)||1;
   const w=x=>(x/scale*100).toFixed(2)+"%";
-  const left = tot!==null ? `剩 <b>${fmtH(tot-used)}</b> / ${fmtH(tot)}` : `已用 <b>${fmtH(used)}</b>（未填年度總量）`;
+  const left = tot!==null ? `全年剩 <b>${fmtH(tot-used)}</b> / ${fmtH(tot)}` : `已用 <b>${fmtH(used)}</b>（未填單期額度）`;
   const pmax=Math.max(1e-9,...ATR_PARTS.map(p=>u.parts[p][res].Design+u.parts[p][res].Research));
   return `<div class="abl"><div class="t"><span>${label}</span><span>${left}</span></div>
-    <div class="abar${tot!==null&&used>tot+1e-9?" over":""}"><i class="d" style="width:${w(u[res].Design)}"></i><i class="r" style="width:${w(u[res].Research)}"></i></div>
+    <div class="abar${tot!==null&&used>tot+ATR_EPS?" over":""}"><i class="d" style="width:${w(u[res].Design)}"></i><i class="r" style="width:${w(u[res].Research)}"></i></div>
     ${ATR_PARTS.map(p=>{ const d=u.parts[p][res].Design, r=u.parts[p][res].Research;
       return `<div class="arow"><span>${p}</span><div class="abar"><i class="d" style="width:${(d/pmax*100).toFixed(2)}%"></i><i class="r" style="width:${(r/pmax*100).toFixed(2)}%"></i></div><span class="v">${fmtH(d+r)}</span></div>`; }).join("")}
   </div>`;
 }
+// 六期的使用率小格
+function atrPeriodStrip(Y){
+  const P=atrPeriods(Y), n=Math.max(ATR_N,P.length);
+  const cell=(i,res)=>{ const p=P[i], q=Y[res==="c"?"pcfd":"pwt"], v=p?p[res]:0;
+    const pct=q?Math.min(100,v/q*100):0;
+    return `<div class="pc${p&&p.over?" over":""}${i>=ATR_N?" extra":""}"><div class="pf" style="width:${pct.toFixed(1)}%"></div><span>${p?fmtH(v):"·"}</span></div>`; };
+  return `<div class="pstrip" style="grid-template-columns:42px repeat(${n},1fr)">
+    <span></span>${Array.from({length:n},(_,i)=>`<span class="ph${i>=ATR_N?" extra":""}">P${i+1}</span>`).join("")}
+    <span class="pl">CFD</span>${Array.from({length:n},(_,i)=>cell(i,"c")).join("")}
+    <span class="pl">風洞</span>${Array.from({length:n},(_,i)=>cell(i,"w")).join("")}
+  </div>${P.length>ATR_N?`<p class="ferr" style="padding:0 14px 8px">紀錄排出了 ${P.length} 期，超過一年 6 期 — 檢查是否有一筆時數填錯，或某次換期被誤判。</p>`:""}`;
+}
 function atrEntries(Y,y,editable){
   if(!Y.entries.length) return `<p class="empty">${editable?"還沒有紀錄。":"沒有紀錄。"}</p>`;
-  return Y.entries.slice().reverse().map(e=>`<div class="erow2">
+  const P=atrPeriods(Y);
+  return P.slice().reverse().map(p=>`<div class="phd${p.over?" over":""}">第 ${p.n} 期
+      <span>CFD ${fmtH(p.c)}${Y.pcfd!==null?" / "+fmtH(Y.pcfd):""} · 風洞 ${fmtH(p.w)}${Y.pwt!==null?" / "+fmtH(Y.pwt):""}${p.over?" · 超出單期額度":""}</span></div>`
+    + p.entries.slice().reverse().map((e,k,arr)=>{
+      const first = p.n===1 && k===arr.length-1;            // 整年第一筆不能再「開新一期」
+      const npBtn = !editable||first ? "" :
+        (e.np ? `<button class="npb on" data-np="${e.id}" title="這筆是手動開的新一期；按下取消，改回自動判斷">取消新期</button>`
+              : (k===arr.length-1 ? "" : `<button class="npb" data-np="${e.id}" title="上一期沒用滿就換期了：從這筆開始算新的一期">從這筆開新一期</button>`));
+      return `<div class="erow2">
       <span class="p">${e.part}</span><span class="k ${e.type==="Design"?"d":"r"}">${e.type}</span>
       <span class="h">CFD ${fmtH(e.cfd)} · 風洞 ${fmtH(e.wt)}</span>
       ${editable?delBtn("x","atr:"+y+":"+e.id):"<span></span>"}
-      ${e.note?`<span class="nt">${esc(e.note)}</span>`:""}
-    </div>`).join("");
+      ${npBtn||e.note?`<span class="nt">${npBtn}${e.note?esc(e.note):""}</span>`:""}
+    </div>`; }).join("")).join("");
+}
+function atrPreview(){
+  const Y=atrY(), c=num($("atrCfd").value), w=num($("atrWt").value), el=$("atrNext"), o=atrOpen(Y);
+  if(c===null&&w===null){
+    el.textContent = (Y.pcfd===null&&Y.pwt===null) ? "" :
+      o.n>ATR_N ? `今年 ${ATR_N} 期額度已全部用完` :
+      `目前第 ${o.n} 期，本期剩 CFD ${fmtH(o.c)} · 風洞 ${fmtH(o.w)}`;
+    return;
+  }
+  const P=atrPeriods(Y,{cfd:c||0,wt:w||0}), last=P[P.length-1];
+  el.innerHTML = `這筆會記在 <b>第 ${last.n} 期</b>`
+    + (last.over?`<span style="color:var(--bad)">（超出單期額度）</span>`:"")
+    + (last.n>ATR_N?`<span style="color:var(--bad)">（超過一年 ${ATR_N} 期）</span>`:"");
 }
 function renderAtr(){
   const Y=atrY();
   $("atrYear").textContent=season;
-  if(document.activeElement!==$("atrCfdTot")) $("atrCfdTot").value=Y.cfd??"";
-  if(document.activeElement!==$("atrWtTot"))  $("atrWtTot").value=Y.wt??"";
-  $("atrQuota").textContent = (Y.cfd!==null||Y.wt!==null)
-    ? `每期 1/6：CFD ${fmtH(Y.cfd/6)} · 風洞 ${fmtH(Y.wt/6)}　半期 1/12：${fmtH(Y.cfd/12)} · ${fmtH(Y.wt/12)}`
-    : "填入年度總量後，下方 1/6、1/12 按鈕才會帶入數值";
-  document.querySelectorAll("#atrSide .q").forEach(b=>b.disabled=(b.dataset.f==="atrCfd"?Y.cfd:Y.wt)===null);
-  $("atrChart").innerHTML = atrBlock(Y,"cfd","CFD")+atrBlock(Y,"wt","風洞")
+  if(document.activeElement!==$("atrCfdTot")) $("atrCfdTot").value=Y.pcfd??"";
+  if(document.activeElement!==$("atrWtTot"))  $("atrWtTot").value=Y.pwt??"";
+  $("atrQuota").textContent = (Y.pcfd!==null||Y.pwt!==null)
+    ? `全年 ×6：CFD ${fmtH(Y.pcfd===null?null:Y.pcfd*ATR_N)} · 風洞 ${fmtH(Y.pwt===null?null:Y.pwt*ATR_N)}　半期：${fmtH(Y.pcfd/2)} · ${fmtH(Y.pwt/2)}`
+    : "填入單期額度後，紀錄才會自動分期，下方快捷鍵也才會帶入數值";
+  document.querySelectorAll("#atrSide .q").forEach(b=>b.disabled=(b.dataset.f==="atrCfd"?Y.pcfd:Y.pwt)===null);
+  $("atrChart").innerHTML = atrPeriodStrip(Y) + atrBlock(Y,"cfd","CFD")+atrBlock(Y,"wt","風洞")
     + `<div class="alg"><span><i style="background:var(--band)"></i>Design</span><span><i style="background:var(--optimal)"></i>Research</span></div>`;
   $("atrList").innerHTML = atrEntries(Y,season,true);
-  const old=Object.keys(atr).map(Number).filter(y=>y!==season&&(atr[y].entries.length||atr[y].cfd!==null||atr[y].wt!==null)).sort((a,b)=>b-a);
+  atrPreview();
+  const has=y=>atr[y].entries.length||atr[y].pcfd!==null||atr[y].pwt!==null;
+  const old=Object.keys(atr).map(Number).filter(y=>y!==season&&has(y)).sort((a,b)=>b-a);
   $("atrOldPanel").hidden=!old.length;
   $("atrOld").innerHTML = old.map(y=>{ const Y2=atr[y], u=atrUsed(Y2);
-    return `<details class="yr"><summary>${y} · CFD ${fmtH(u.cfd.Design+u.cfd.Research)}/${fmtH(Y2.cfd)} · 風洞 ${fmtH(u.wt.Design+u.wt.Research)}/${fmtH(Y2.wt)} · ${Y2.entries.length} 筆</summary>
-      ${atrBlock(Y2,"cfd","CFD")}${atrBlock(Y2,"wt","風洞")}${atrEntries(Y2,y,false)}
+    return `<details class="yr"><summary>${y} · CFD ${fmtH(u.cfd.Design+u.cfd.Research)} · 風洞 ${fmtH(u.wt.Design+u.wt.Research)} · ${atrPeriods(Y2).length} 期 ${Y2.entries.length} 筆</summary>
+      ${atrPeriodStrip(Y2)}${atrBlock(Y2,"cfd","CFD")}${atrBlock(Y2,"wt","風洞")}${atrEntries(Y2,y,false)}
       ${delBtn("ydel","atry:"+y,"刪除 "+y+" 整年的 ATR 紀錄")}</details>`; }).join("");
 }
 ["atrCfdTot","atrWtTot"].forEach(id=>$(id).addEventListener("change",e=>{
-  atrY()[id==="atrCfdTot"?"cfd":"wt"]=num(e.target.value); save(); renderAtr();
+  atrY()[id==="atrCfdTot"?"pcfd":"pwt"]=num(e.target.value); save(); renderAtr();
 }));
+["atrCfd","atrWt"].forEach(id=>$(id).addEventListener("input",atrPreview));
 $("atrSide").addEventListener("click",e=>{
   const q=e.target.closest(".q");
-  if(q){ const tot=atrY()[q.dataset.f==="atrCfd"?"cfd":"wt"]; if(tot!==null) $(q.dataset.f).value=fmtH(tot/+q.dataset.d).replace(/,/g,""); return; }
+  if(q){
+    const Y=atrY(), cf=q.dataset.f==="atrCfd", per=Y[cf?"pcfd":"pwt"]; if(per===null) return;
+    const v = q.dataset.d==="rem" ? atrOpen(Y)[cf?"c":"w"] : per/+q.dataset.d;
+    $(q.dataset.f).value=String(Math.round(v*100)/100); atrPreview(); return;
+  }
+  const npb=e.target.closest(".npb");
+  if(npb){ const en=atrY().entries.find(x=>x.id===npb.dataset.np); if(en){ en.np=!en.np; save(); renderAtr(); } return; }
   const x=e.target.closest("button[data-k]"); if(!x) return;
   const k=x.dataset.k;
   if(!armed(k,renderAtr)) return;
@@ -1652,7 +1751,7 @@ $("atrAdd").addEventListener("click",()=>{
   const err=$("atrErr"), part=atrPart.get(), cfd=num($("atrCfd").value), wt=num($("atrWt").value);
   const msg = !part ? "先選部件。" : (cfd===null&&wt===null) ? "CFD 和風洞至少填一個。" : (cfd<0||wt<0) ? "時數不能是負的。" : "";
   err.hidden=!msg; err.textContent=msg; if(msg) return;
-  atrY().entries.push({id:uid(), t:Date.now(), part, type:atrType.get()||"Design", cfd:cfd||0, wt:wt||0, note:$("atrNote").value.trim()});
+  atrY().entries.push({id:uid(), t:Date.now(), part, type:atrType.get()||"Design", cfd:cfd||0, wt:wt||0, note:$("atrNote").value.trim(), np:false});
   $("atrCfd").value=""; $("atrWt").value=""; $("atrNote").value="";
   save(); renderAtr();
 });
