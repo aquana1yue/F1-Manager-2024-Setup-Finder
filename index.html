@@ -319,6 +319,9 @@ details.yr .ydel{margin:6px 14px 12px;font-size:11.5px;padding:3px 8px;color:var
 .tst td.na{color:var(--line)}
 .tst table + .ssec{margin-top:10px}
 .ssec{font-size:11.5px;color:var(--band);padding:4px 0 2px;letter-spacing:.3px}
+.tst table.tot td b{display:inline}
+details.tylist > summary{padding:9px 14px;cursor:pointer;font-size:12.5px;color:var(--dim);border-top:1px solid var(--line-soft)}
+details.tylist > summary:hover{color:var(--text)}
 .trow .sb{font-family:var(--mono);font-size:10.5px;color:var(--band);border:1px solid var(--line);padding:0 4px;margin-right:4px}
 .trow .fixsel{width:auto!important;font-size:11px!important;padding:1px 3px!important;margin-right:4px;border-color:var(--rec)!important;color:var(--rec)!important}
 .tst .ex{font-size:11px;color:var(--faint);margin-top:6px}
@@ -1791,18 +1794,22 @@ $("tyTagIn").addEventListener("keydown",e=>{
 });
 $("tyTags").addEventListener("click",e=>{ const b=e.target.closest("button[data-ti]"); if(!b) return; tyPendingTags.splice(+b.dataset.ti,1); renderTagInput(); });
 let tyTarget=30;
+let tyListOpen=false; try{ tyListOpen=localStorage.getItem(SKEY+"-tylist")==="1"; }catch(e){}
 const carLabel=c=>c===0?"Car 1":c===1?"Car 2":"未分車";
 function renderTyres(){
   const t=T(); if(!t) return;
   $("tyHead").textContent=t.code+" · "+season;
   const rows=tyres.filter(r=>r.track===t.key);
   // 統計：節次 → 胎種 × 模式 → 車號；跨所有賽季，以總消耗 ÷ 總圈數加權
-  const S=new Map(); let nEx=0, nWet=0; const qRows=[];
+  const S=new Map(); let nEx=0, nWet=0; const qRows=[]; const TOT=new Map();
   rows.forEach(r=>{
     const pl=perLap(r); if(pl===null) return;
     if(!DRY.includes(r.comp)){ nWet++; return; }
     if(r.session==="Q"){ qRows.push(r); return; }
     if(r.excl){ nEx++; return; }
+    const tk=r.comp+"|"+(r.mode||"—");
+    const tg=TOT.get(tk)||{comp:r.comp,mode:r.mode||"—",n:0,laps:0,wear:0};
+    tg.n++; tg.laps+=r.laps; tg.wear+=r.start-r.end; TOT.set(tk,tg);
     const sk=r.session?ZONE[r.session]:"—";
     if(!S.has(sk)) S.set(sk,{rows:new Map(), cars:new Set()});
     const sess=S.get(sk), rk=r.comp+"|"+(r.mode||"—"), ck=r.car===null?"x":r.car;
@@ -1815,12 +1822,19 @@ function renderTyres(){
   const cell=c=>{ if(!c) return `<td class="na">—</td>`; const a=c.wear/c.laps;
     return `<td><b>${a.toFixed(2)}%</b><small>${a>0?"≈"+Math.floor((100-tyTarget)/a)+" 圈 · ":""}${c.n} 筆</small></td>`; };
   qRows.sort((a,b)=>b.season-a.season||b.t-a.t);
+  const TG=[...TOT.values()].sort((a,b)=>DRY.indexOf(a.comp)-DRY.indexOf(b.comp)||MODES.indexOf(a.mode)-MODES.indexOf(b.mode));
+  const totHtml = TG.length ? `<div class="ssec">總計（不分車、不分節次，不含 Q / SQ）</div>
+      <table class="tot"><tr><th>胎種 · 模式</th><th>每圈</th><th>可跑</th><th>筆數</th></tr>
+      ${TG.map(g=>{ const a=g.wear/g.laps;
+        return `<tr><td class="cm">${g.comp} · ${g.mode}</td><td><b>${a.toFixed(2)}%</b></td>
+          <td>${a>0?"≈"+Math.floor((100-tyTarget)/a)+" 圈":"—"}</td><td>${g.n}（${g.laps} 圈）</td></tr>`; }).join("")}</table>` : "";
   const qHtml = qRows.length ? `<div class="ssec">Q / SQ 紀錄（只記錄，不列入平均）</div>
       <table><tr><th>車</th><th>胎種 · 模式</th><th>耐久</th><th>這一次扣</th></tr>
       ${qRows.map(r=>`<tr><td>${carLabel(r.car)}</td><td class="cm">${r.comp} · ${r.mode||"—"}</td>
         <td>${fmtH(r.start)}→${fmtH(r.end)}% · ${r.laps} 圈</td><td><b>−${fmtH(r.start-r.end)}%</b><small>${r.season}</small></td></tr>`).join("")}</table>` : "";
   $("tyStats").innerHTML = sessOrder.length||qRows.length||nEx||nWet ? `<div class="tst">
       <div class="hd">${t.code} 歷年平均 · 用到剩 <input id="tyTarget" value="${tyTarget}" inputmode="decimal">% 約幾圈</div>
+      ${totHtml}
       ${sessOrder.map(sk=>{ const sess=S.get(sk);
         const cols=[0,1].concat(sess.cars.has("x")?["x"]:[]);
         const R=[...sess.rows.values()].sort((a,b)=>DRY.indexOf(a.comp)-DRY.indexOf(b.comp)||MODES.indexOf(a.mode)-MODES.indexOf(b.mode));
@@ -1832,7 +1846,7 @@ function renderTyres(){
       ${nWet?`<div class="ex">${nWet} 筆雨胎紀錄不列入統計。</div>`:""}</div>` : "";
   const sel=(r,f)=>{ const opts=f==="session"?SESSIONS.map(x=>[x,SESSION_LABEL[x]]):[[0,"Car 1"],[1,"Car 2"]];
     return `<select class="fixsel" data-id="${r.id}" data-f="${f}"><option value="">${f==="session"?"補節次":"補車號"}</option>${opts.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select>`; };
-  $("tyList").innerHTML = rows.length ? rows.slice().sort((a,b)=>b.season-a.season||b.t-a.t).map(r=>{
+  const items = rows.slice().sort((a,b)=>b.season-a.season||b.t-a.t).map(r=>{
       const pl=perLap(r), wet=!DRY.includes(r.comp);
       const env=[r.air!==null?"氣溫 "+fmtH(r.air)+"°":null, r.trk!==null?"賽道 "+fmtH(r.trk)+"°":null].filter(Boolean).join(" · ");
       return `<div class="trow${r.excl||wet?" ex":""}">
@@ -1842,9 +1856,16 @@ function renderTyres(){
         ${env||r.excl||wet?`<span class="c">${esc(env)}${r.excl?(env?" · ":"")+"排除統計":""}${wet?(env?" · ":"")+"雨胎，不列入統計":""}</span>`:""}
         ${r.tags.length?`<span class="tags">${r.tags.map(x=>`<span class="tag user">${esc(x)}</span>`).join("")}</span>`:""}
         ${r.note?`<span class="nt">${esc(r.note)}</span>`:""}
-      </div>`; }).join("")
+      </div>`; }).join("");
+  const unfixed=rows.filter(r=>!r.session||r.car===null).length;
+  $("tyList").innerHTML = rows.length
+    ? `<details class="tylist"${tyListOpen?" open":""}><summary>單筆紀錄（${rows.length} 筆${unfixed?`，${unfixed} 筆待補節次 / 車號`:""}）</summary>${items}</details>`
     : `<p class="empty">這條賽道還沒有輪胎紀錄。</p>`;
 }
+$("tyList").addEventListener("toggle",e=>{
+  if(!e.target.classList.contains("tylist")) return;
+  tyListOpen=e.target.open; try{ localStorage.setItem(SKEY+"-tylist",tyListOpen?"1":"0"); }catch(err){}
+},true);
 $("tyStats").addEventListener("change",e=>{ if(e.target.id!=="tyTarget") return; const v=num(e.target.value); if(v!==null&&v>=0&&v<100) tyTarget=v; renderTyres(); });
 // 舊紀錄沒有節次 / 車號：清單上直接補
 $("tyList").addEventListener("change",e=>{
