@@ -425,7 +425,7 @@ details.tylist > summary:hover{color:var(--text)}
       <div class="body"><div class="fbfor" id="fbFor"></div><div id="feedback"></div>
         <div class="fb satrow"><div class="fb-name">車手滿意度</div>
           <div class="satin"><input id="satIn" inputmode="decimal" spellcheck="false" placeholder="—"><span>%</span>
-          <span class="hint" style="padding:0">選填。跟這一輪的設置一起記下，之後用來分析滿意度和離真解多遠的關係</span></div></div></div>
+          <span class="hint" style="padding:0">選填。有填就一起拿來縮小範圍（滿意度 ≈ 100 ×（1 − 五維偏差總和））；FP 被切斷、回饋沒拿滿時留空即可</span></div></div></div>
       <div class="actions">
         <button class="primary" id="record">記錄回饋，給下一組</button>
         <button id="clearFb">清空選擇</button>
@@ -697,6 +697,11 @@ function renderSaveState(){
 }
 
 /* ================= 求解 ================= */
+// 車手滿意度 = round(100 × (1 − Σ 五維偏差))：由 2025 季 45 輪紀錄反推，R² = 0.9994，殘差都在四捨五入範圍內。
+// 所以一個滿意度等於把「五維偏差總和」鎖在 (100 − 滿意度)/100 ± 0.005 之內。選填：FP 被切斷、回饋沒拿滿時可以不填。
+const SAT_TOL=0.0051;
+const satRange=sat=>({lo:(100-sat)/100-SAT_TOL, hi:(100-sat)/100+SAT_TOL});
+const satPredict=(pv,tv)=>{ let s=0; for(let i=0;i<5;i++) s+=Math.abs(pv[i]-tv[i]); return Math.max(0,Math.round(100*(1-s))); };
 function ok(list,x){
   for(let i=0;i<list.length;i++){
     const c=list[i], d=Math.abs(x-c.v);
@@ -707,6 +712,7 @@ function ok(list,x){
 function forEachCandidate(cons,cb){
   const O=DIMS[0].c,B=DIMS[1].c,C=DIMS[2].c,T=DIMS[3].c,S=DIMS[4].c;
   const v=[0,0,0,0,0];
+  const SC=cons.sat||[], NS=SC.length;
   for(let a=0;a<21;a++){
     const oa=DIMS[0].base+a*O[0], ba=DIMS[1].base+a*B[0], ca=DIMS[2].base+a*C[0], ta=DIMS[3].base+a*T[0];
     for(let b=0;b<15;b++){
@@ -718,10 +724,23 @@ function forEachCandidate(cons,cb){
         for(let d=0;d<17;d++){
           const ov=oc+d*O[3]; if(!ok(cons[0],ov)) continue;   // Oversteer 不吃 E
           const tv=tc+d*T[3]; if(!ok(cons[3],tv)) continue;   // Traction 不吃 E
+          if(NS){                                               // 已知三維的偏差和超過上限，E 怎麼調都救不回來
+            let bad=false;
+            for(let k=0;k<NS;k++){ const q=SC[k].p;
+              if(Math.abs(ov-q[0])+Math.abs(tv-q[3])+Math.abs(sv-q[4])>SC[k].hi+EPS){ bad=true; break; } }
+            if(bad) continue;
+          }
           const bd=bc+d*B[3], cd=cc+d*C[3];
           for(let e=0;e<21;e++){
             const bv=bd+e*B[4]; if(!ok(cons[1],bv)) continue;
             const cv=cd+e*C[4]; if(!ok(cons[2],cv)) continue;
+            if(NS){
+              let bad=false;
+              for(let k=0;k<NS;k++){ const q=SC[k].p;
+                const t=Math.abs(ov-q[0])+Math.abs(bv-q[1])+Math.abs(cv-q[2])+Math.abs(tv-q[3])+Math.abs(sv-q[4]);
+                if(t<SC[k].lo-EPS||t>SC[k].hi+EPS){ bad=true; break; } }
+              if(bad) continue;
+            }
             v[0]=ov;v[1]=bv;v[2]=cv;v[3]=tv;v[4]=sv;
             cb(a,b,c,d,e,v);
           }
@@ -771,6 +790,7 @@ function infoPick(cs){
     for(const q of cs){
       let sig=0;
       for(let k=0;k<5;k++) sig=sig*4+rateOf(Math.abs(p.v[k]-q.v[k]));
+      sig=sig*101+satPredict(p.v,q.v);                 // 預期會拿到滿意度；它比單項評價精確得多
       map.set(sig,(map.get(sig)||0)+q.w);
     }
     let ss=0; for(const m of map.values()) ss+=m*m;
@@ -825,22 +845,16 @@ const MU=()=>usePrior?priorMu(T()):null;                       // 顯示用：�
 const PRI=()=>usePrior&&T().setups.length?T().setups.map(values):null;  // 選點用：每筆歷史解
 const lastSetup=()=>C().history.length?C().history[C().history.length-1].setup:null;
 
-function constraintsOf(car){
-  const cons=[[],[],[],[],[]];
-  for(const h of car.history){
-    const v=values(h.setup);
-    h.ratings.forEach((r,i)=>{ if(r!==null) cons[i].push({v:v[i],lo:RATINGS[r].lo,hi:RATINGS[r].hi}); });
-  }
-  return cons;
-}
+function constraintsOf(car){ return consOfRounds(car.history); }
 
 // 只數不排序，給診斷用
 function countOnly(cons){ let n=0; forEachCandidate(cons,()=>{n++;}); return n; }
 function consOfRounds(rounds){
-  const cons=[[],[],[],[],[]];
+  const cons=[[],[],[],[],[]]; cons.sat=[];
   for(const h of rounds){
     const v=values(h.setup);
     h.ratings.forEach((r,i)=>{ if(r!==null) cons[i].push({v:v[i],lo:RATINGS[r].lo,hi:RATINGS[r].hi}); });
+    if(h.sat!=null){ const r=satRange(h.sat); cons.sat.push({p:v,lo:r.lo,hi:r.hi}); }
   }
   return cons;
 }
@@ -876,7 +890,7 @@ function alternatives(){
     if(r===null) return;
     for(const nr of [r-1,r+1]){
       if(nr<0||nr>3) continue;
-      const rounds=H.map((x,j)=>j!==ri?x:{setup:x.setup,ratings:x.ratings.map((y,k)=>k===dim?nr:y)});
+      const rounds=H.map((x,j)=>j!==ri?x:{setup:x.setup,ratings:x.ratings.map((y,k)=>k===dim?nr:y),sat:x.sat});
       const alt=solve(consOfRounds(rounds),pts,true);   // 問的是「最可能的答案」，不需要資訊增益
       if(!alt.n||sameSetup(alt.best,res.best)) continue;
       const key=alt.best.join(",");
@@ -896,8 +910,9 @@ function repairRound(idx){
   const S=[]; let si=0;
   forEachCandidate(cons,(a,b,c,d,e,v)=>{ if(si++%stride===0) S.push(v.slice()); });
   if(!S.length) return [];
-  const fitsWith=(setup,ratings)=>{
-    const sv=values(setup);
+  const sat0=rec.sat??null;
+  const fitsWith=(setup,ratings,sat=sat0)=>{
+    const sv=values(setup), sr=sat==null?null:satRange(sat);
     for(let j=0;j<S.length;j++){
       const c=S[j]; let ok=true;
       for(let k=0;k<5;k++){
@@ -905,11 +920,15 @@ function repairRound(idx){
         const d=Math.abs(sv[k]-c[k]);
         if(d<RATINGS[r].lo-EPS||d>RATINGS[r].hi+EPS){ ok=false; break; }
       }
+      if(ok&&sr){ let t=0; for(let k=0;k<5;k++) t+=Math.abs(sv[k]-c[k]); if(t<sr.lo-EPS||t>sr.hi+EPS) ok=false; }
       if(ok) return true;
     }
     return false;
   };
   const out=[], seen=new Set();
+  // (0) 滿意度記到舊數字（還沒跑出新回饋就先記了）：拿掉這輪的滿意度就成立
+  if(sat0!==null && fitsWith(rec.setup,rec.ratings,null))
+    out.push({type:"sat",cost:1,setup:rec.setup.slice(),ratings:rec.ratings.slice(),sat:null,from:sat0});
   // (1) 輸入車手回報時點錯一格
   for(let i=0;i<5;i++){
     const cur=rec.ratings[i]; if(cur===null) continue;
@@ -919,7 +938,7 @@ function repairRound(idx){
       const rr=rec.ratings.slice(); rr[i]=nr;
       if(fitsWith(rec.setup,rr))
         out.push({type:"rating",dim:i,from:cur,to:nr,cost:Math.abs(nr-cur)===1?1:3,
-                  setup:rec.setup.slice(),ratings:rr});
+                  setup:rec.setup.slice(),ratings:rr,sat:sat0});
     }
   }
   // (2) 遊戲裡調整的滑桿與建議不一致
@@ -929,7 +948,7 @@ function repairRound(idx){
     const s=rec.setup.slice(); s[p]=x;
     if(fitsWith(s,rec.ratings))
       out.push({type:"slider",slider:p,from:rec.setup[p],to:x,cost:Math.abs(x-rec.setup[p]),
-                setup:s,ratings:rec.ratings.slice()});
+                setup:s,ratings:rec.ratings.slice(),sat:sat0});
   }
   // (3) 單一修正都不行時，才試兩根滑桿
   if(!out.length){
@@ -940,11 +959,28 @@ function repairRound(idx){
         const key=s.join(","); if(seen.has(key)) continue; seen.add(key);
         if(fitsWith(s,rec.ratings))
           out.push({type:"slider2",cost:10+Math.abs(x-rec.setup[p])+Math.abs(y-rec.setup[q]),
-                    setup:s,ratings:rec.ratings.slice()});
+                    setup:s,ratings:rec.ratings.slice(),sat:sat0});
       }
   }
   out.sort((a,b)=>a.cost-b.cost);
   return out.slice(0,6);
+}
+// 記錄當下的自我檢查：
+// (1) 這輪的滿意度和這輪的評價彼此矛盾（評價隱含的偏差總和範圍，和滿意度給的範圍沒有交集）
+// (2) 設置變了，但評價和滿意度跟上一輪一模一樣 — 多半是新回饋還沒出來就記了畫面上的舊數字
+function feedbackChecks(rec,prev){
+  const out=[];
+  if(rec.sat!=null && rec.ratings.some(r=>r!==null)){
+    let lo=0, hi=0;
+    rec.ratings.forEach(r=>{ if(r===null){ hi+=1; } else { lo+=RATINGS[r].lo; hi+=Math.min(1,RATINGS[r].hi); } });
+    const sr=satRange(rec.sat);
+    if(sr.hi<lo-EPS) out.push(`滿意度 ${fmtH(rec.sat)}% 太高：照這輪的評價，偏差總和至少 ${lo.toFixed(3)}，滿意度最多約 ${Math.floor(100*(1-lo)+0.5)}%。`);
+    else if(sr.lo>hi+EPS) out.push(`滿意度 ${fmtH(rec.sat)}% 太低：照這輪的評價，滿意度至少約 ${Math.ceil(100*(1-hi)-0.5)}%。`);
+  }
+  if(prev && !sameSetup(prev.setup,rec.setup) && rec.sat!=null && prev.sat===rec.sat
+     && rec.ratings.every((r,i)=>r===prev.ratings[i]))
+    out.push("設置換了，但評價和滿意度跟上一輪完全一樣 — 可能是新回饋還沒出來就記到上一輪的數字。");
+  return out;
 }
 function rateOf(d){ for(let i=0;i<3;i++) if(d<=CUT[i]+EPS) return i; return 3; }
 // Sprint：B–E 鎖死，只能動 A。挑「預期剩餘解最少」的那格，而不是最靠近先驗的那格
@@ -961,6 +997,7 @@ function sprintOptions(cons,base,n){
     for(let j=0;j<M;j++){
       const c=cands[j]; let sig=0;
       for(let k=0;k<5;k++) sig=sig*4+rateOf(Math.abs(tv[k]-c[k]));
+      sig=sig*101+satPredict(tv,c);
       map.set(sig,(map.get(sig)||0)+1);
     }
     let ss=0; for(const m of map.values()) ss+=m*m;
@@ -1338,10 +1375,10 @@ function renderDiag(){
       else if(f.type==="slider")
         desc=`滑桿不一致：${SLIDERS[f.slider].k} ${SLIDERS[f.slider].fmt(f.from)} → ${SLIDERS[f.slider].fmt(f.to)}`;
       else
-        desc=`兩根滑桿不一致`;
+        desc= f.type==="sat" ? `滿意度可能是上一輪的舊數字：拿掉這輪的 ${fmtH(f.from)}%` : `兩根滑桿不一致`;
       return `<div class="fix"><span class="s">${f.setup.map((x,i)=>SLIDERS[i].k+x).join(" ")}</span>
         <span class="w">${desc}</span>
-        <button data-fixi="${d.target}" data-fix="${f.setup.join(",")}" data-fixr="${f.ratings.join(",")}">改成這樣</button></div>`;
+        <button data-fixi="${d.target}" data-fix="${f.setup.join(",")}" data-fixr="${f.ratings.join(",")}" data-fixs="${f.sat==null?"":f.sat}">改成這樣</button></div>`;
     }).join("");
     el.innerHTML=html+fbHtml;
   });
@@ -1435,7 +1472,8 @@ $("record").addEventListener("click",()=>{
              ratings:rec.ratings.slice(), sat:rec.sat??null, n:res.n, solved:res.n===1?res.best.slice():null});
     if(res.n>0) C().setup=recommended();         // 直接套用下一組建議
     busy=false; render();
-    const w=$("fbWarn");
+    const w=$("fbWarn"), H=C().history;
+    const chk=feedbackChecks(rec, H.length>1?H[H.length-2]:null);
     if(res.n===0){
       w.textContent="這筆回饋和之前的紀錄無法同時成立。下面的診斷會指出是哪一輪、以及當時實際可能跑的設置。";
       w.hidden=false;
@@ -1443,6 +1481,7 @@ $("record").addEventListener("click",()=>{
       w.textContent="可能解沒有減少：這組設置在五個維度上和先前等價。手動把滑桿拉開一點再跑一輪。";
       w.hidden=false;
     }else w.hidden=true;
+    if(chk.length){ w.textContent=(w.hidden?"":w.textContent+" ")+chk.join(" ")+" 確認是誤記的話，在下方刪掉這一輪重記。"; w.hidden=false; }
   });
 });
 $("clearFb").addEventListener("click",()=>{ C().pending=[null,null,null,null,null]; C().psat=null; renderPending(); $("fbWarn").hidden=true; });
@@ -1517,6 +1556,7 @@ $("diag").addEventListener("click",e=>{
     const h=C().history[+f.dataset.fixi];
     h.setup=f.dataset.fix.split(",").map(Number);
     if(f.dataset.fixr) h.ratings=f.dataset.fixr.split(",").map(x=>x===""||x==="null"?null:+x);
+    if(f.dataset.fixs!==undefined) h.sat = f.dataset.fixs==="" ? null : +f.dataset.fixs;
     recompute(); return;
   }
   const kl=e.target.closest("button[data-keeplast]");
